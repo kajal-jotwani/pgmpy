@@ -103,9 +103,8 @@ class _GraphRolesMixin:
                         else:
                             existing_role = set()
 
-                    updated_roles = existing_role.copy()
-                    updated_roles.add(role)
-                    new_graph.add_node(var, roles=updated_roles)
+                    existing_role.add(role)
+                    new_graph.add_node(var, roles=existing_role)
         else:
             for var in variables:
                 if var not in new_graph.graph:
@@ -118,9 +117,8 @@ class _GraphRolesMixin:
                         else:
                             existing_role = set()
 
-                    updated_roles = existing_role.copy()
-                    updated_roles.add(role)
-                    new_graph.add_node(var, roles=updated_roles)
+                    existing_role.add(role)
+                    new_graph.add_node(var, roles=existing_role)
         return new_graph
 
     def without_role(self, role: str, variables=None, inplace=False):
@@ -153,7 +151,6 @@ class _GraphRolesMixin:
             if variables is None or v in variables:
                 roles = attr.get("roles", set())
                 if isinstance(roles, set) and role in roles:
-                    roles = roles.copy()
                     roles.discard(role)
                     if len(roles) == 0:
                         attr.pop("roles")
