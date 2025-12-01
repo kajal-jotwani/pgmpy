@@ -97,11 +97,6 @@ class _GraphRolesMixin:
                     raise ValueError(f"Variable '{var}' not found in the graph.")
                 else:
                     existing_role = new_graph.nodes[var].get("roles", set())
-                    if not isinstance(existing_role, set):
-                        if existing_role is not None:
-                            existing_role = {existing_role}
-                        else:
-                            existing_role = set()
 
                     existing_role.add(role)
                     new_graph.add_node(var, roles=existing_role)
@@ -111,11 +106,6 @@ class _GraphRolesMixin:
                     raise ValueError(f"Variable '{var}' not found in the graph.")
                 else:
                     existing_role = new_graph.nodes[var].get("roles", set())
-                    if not isinstance(existing_role, set):
-                        if existing_role is not None:
-                            existing_role = {existing_role}
-                        else:
-                            existing_role = set()
 
                     existing_role.add(role)
                     new_graph.add_node(var, roles=existing_role)
