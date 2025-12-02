@@ -41,6 +41,21 @@ def test_with_role_raises_for_missing_variable(basic_dag):
         basic_dag.with_role(role="exposures", variables="MISSING", inplace=True)
 
 
+def test_with_role_inplace_false_returns_new_graph(basic_dag):
+    new_graph = basic_dag.with_role(
+        role="exposures", variables={"X", "Z"}, inplace=False
+    )
+
+    for _, attr in basic_dag.nodes(data=True):
+        assert "roles" not in attr
+
+    assert new_graph is not basic_dag
+
+    assert new_graph.nodes["X"]["roles"] == {"exposures"}
+    assert new_graph.nodes["Z"]["roles"] == {"exposures"}
+    assert set(new_graph.get_role("exposures")) == {"X", "Z"}
+
+
 def test_get_roles_and_get_role_dict(basic_dag):
     basic_dag.with_role(role="exposures", variables="X", inplace=True)
     basic_dag.with_role(role="outcomes", variables={"Y", "Z"}, inplace=True)
@@ -83,6 +98,22 @@ def test_without_role_all_variables_when_variables_none(basic_dag):
     assert "exposures" not in basic_dag.nodes["X"].get("roles", set())
     assert "exposures" not in basic_dag.nodes["Z"].get("roles", set())
     assert "outcomes" in basic_dag.nodes["Y"]["roles"]
+
+
+def test_without_role_inplace_false_returns_new_graph(basic_dag):
+    basic_dag.with_role("exposures", {"X", "Z"}, inplace=True)
+    basic_dag.with_role("outcomes", {"Y"}, inplace=True)
+
+    new_graph = basic_dag.without_role(role="exposures", variables="X", inplace=False)
+
+    assert "exposures" in basic_dag.nodes["X"]["roles"]
+    assert "exposures" in basic_dag.nodes["Z"]["roles"]
+
+    assert new_graph is not basic_dag
+
+    assert "exposures" not in new_graph.nodes["X"].get("roles", set())
+    assert "exposures" in new_graph.nodes["Z"]["roles"]
+    assert "outcomes" in new_graph.nodes["Y"]["roles"]
 
 
 def test_latents_property_and_observed():
