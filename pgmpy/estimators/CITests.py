@@ -30,6 +30,10 @@ class _HashableDataFrame:
 
 
 def _cached_ci_test(func):
+    """
+    Decorator to apply lru_cache to CI tests. Converts unhashable arguments
+    (DataFrames, lists, kwargs) into hashable types before caching.
+    """
 
     @lru_cache(maxsize=CI_TEST_CACHE_SIZE)
     def _cached(X, Y, Z_tuple, data_wrapped, boolean, kwargs_items):
@@ -43,10 +47,6 @@ def _cached_ci_test(func):
         )
 
     def wrapper(X, Y, Z, data, boolean=True, **kwargs):
-        """
-        Decorator to apply lru_cache to CI tests. Converts unhashable arguments
-        (DataFrames, lists, kwargs) into hashable types before caching.
-        """
         return _cached(
             X,
             Y,
