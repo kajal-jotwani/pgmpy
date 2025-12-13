@@ -1,4 +1,5 @@
 from collections.abc import Callable
+from functools import lru_cache
 from typing import Dict, List, Optional, Union
 
 import numpy as np
@@ -6,9 +7,56 @@ import pandas as pd
 from scipy import stats
 from sklearn.cross_decomposition import CCA
 
-from pgmpy.global_vars import logger
+from pgmpy.global_vars import CI_TEST_CACHE_SIZE, logger
 from pgmpy.independencies import IndependenceAssertion
 from pgmpy.utils import get_dataset_type
+
+
+class _HashableDataFrame:
+    """
+    Identity-based hash wrapper for pandas DataFrame.
+    """
+
+    __slots__ = ("df",)
+
+    def __init__(self, df: pd.DataFrame):
+        self.df = df
+
+    def __hash__(self):
+        return id(self.df)
+
+    def __eq__(self, other):
+        return isinstance(other, _HashableDataFrame) and self.df is other.df
+
+
+def _cached_ci_test(func):
+
+    @lru_cache(maxsize=CI_TEST_CACHE_SIZE)
+    def _cached(X, Y, Z_tuple, data_wrapped, boolean, kwargs_items):
+        return func(
+            X=X,
+            Y=Y,
+            Z=list(Z_tuple),
+            data=data_wrapped.df,
+            boolean=boolean,
+            **dict(kwargs_items),
+        )
+
+    def wrapper(X, Y, Z, data, boolean=True, **kwargs):
+        """
+        Decorator to apply lru_cache to CI tests. Converts unhashable arguments
+        (DataFrames, lists, kwargs) into hashable types before caching.
+        """
+        return _cached(
+            X,
+            Y,
+            tuple(Z),
+            _HashableDataFrame(data),
+            boolean,
+            tuple(sorted(kwargs.items())),
+        )
+
+    return wrapper
 
 
 class CITestRegistry:
@@ -154,6 +202,7 @@ def independence_match(X, Y, Z, independencies, **kwargs):
 
 
 @ci_registry.register(name="pearsonr", data_types=["continuous"])
+@_cached_ci_test
 def pearsonr(X, Y, Z, data, boolean=True, **kwargs):
     """
     Compute Pearson correlation coefficient and p-value for testing non-correlation.
@@ -224,6 +273,7 @@ def pearsonr(X, Y, Z, data, boolean=True, **kwargs):
 
 
 @ci_registry.register(name="power_divergence", data_types=["discrete"])
+@_cached_ci_test
 def power_divergence(X, Y, Z, data, boolean=True, lambda_="cressie-read", **kwargs):
     """
     Computes the Cressie-Read power divergence statistic [1]. The null hypothesis
@@ -357,6 +407,7 @@ def power_divergence(X, Y, Z, data, boolean=True, lambda_="cressie-read", **kwar
 
 
 @ci_registry.register(name="chi_square", data_types=["discrete"])
+@_cached_ci_test
 def chi_square(X, Y, Z, data, boolean=True, **kwargs):
     """
     Perform Chi-square conditional independence test.
@@ -421,6 +472,7 @@ def chi_square(X, Y, Z, data, boolean=True, **kwargs):
 
 
 @ci_registry.register(name="g_sq", data_types=["discrete"])
+@_cached_ci_test
 def g_sq(X, Y, Z, data, boolean=True, **kwargs):
     """
     G squared test for conditional independence. Also commonly known as G-test,
@@ -483,6 +535,7 @@ def g_sq(X, Y, Z, data, boolean=True, **kwargs):
 
 
 @ci_registry.register(name="log_likelihood", data_types=["discrete"])
+@_cached_ci_test
 def log_likelihood(X, Y, Z, data, boolean=True, **kwargs):
     """
     Log likelihood ratio test for conditional independence. Also commonly known
@@ -553,6 +606,7 @@ def log_likelihood(X, Y, Z, data, boolean=True, **kwargs):
 
 
 @ci_registry.register(name="modified_log_likelihood", data_types=["discrete"])
+@_cached_ci_test
 def modified_log_likelihood(X, Y, Z, data, boolean=True, **kwargs):
     """
     Modified log likelihood ratio test for conditional independence.
@@ -670,6 +724,7 @@ def _get_predictions(X, Y, Z, data, **kwargs):
 
 
 @ci_registry.register(name="pillai", data_types=["discrete", "continuous", "mixed"])
+@_cached_ci_test
 def pillai_trace(X, Y, Z, data, boolean=True, **kwargs):
     """
     A mixed-data residualization based conditional independence test[1].
@@ -778,6 +833,7 @@ def pillai_trace(X, Y, Z, data, boolean=True, **kwargs):
 
 
 @ci_registry.register(name="gcm", data_types=["continuous"])
+@_cached_ci_test
 def gcm(X, Y, Z, data, boolean=True, **kwargs):
     """
     The Generalized Covariance Measure(GCM) test for CI.
@@ -855,6 +911,7 @@ def gcm(X, Y, Z, data, boolean=True, **kwargs):
 
 
 @ci_registry.register(name="pearsonr_equivalence", data_types=["continuous"])
+@_cached_ci_test
 def pearsonr_equivalence(
     X, Y, Z, data, boolean=True, delta_threshold=0.1, **kwargs
 ) -> tuple | bool:

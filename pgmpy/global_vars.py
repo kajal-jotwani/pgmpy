@@ -51,7 +51,7 @@ class Config:
         """
         if self.BACKEND == "numpy":
             raise ValueError(
-                f"Current backend is numpy. Device can only be set for torch backend"
+                "Current backend is numpy. Device can only be set for torch backend"
             )
 
         import torch
@@ -187,3 +187,5 @@ class Config:
 
 
 config = Config()
+
+CI_TEST_CACHE_SIZE = 1024
