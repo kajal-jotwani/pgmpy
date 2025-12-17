@@ -1,5 +1,5 @@
 from collections.abc import Callable
-from functools import lru_cache
+from functools import lru_cache, wraps
 from typing import Dict, List, Optional, Union
 
 import numpy as np
@@ -29,15 +29,18 @@ class _HashableDataFrame:
         return isinstance(other, _HashableDataFrame) and self.df is other.df
 
 
-def _cached_ci_test(func):
+class _CachedCITest:
     """
-    Decorator to apply lru_cache to CI tests. Converts unhashable arguments
-    (DataFrames, lists, kwargs) into hashable types before caching.
+    A wrapper for cached CI tests.
     """
 
-    @lru_cache(maxsize=CI_TEST_CACHE_SIZE)
-    def _cached(X, Y, Z_tuple, data_wrapped, boolean, kwargs_items):
-        return func(
+    def __init__(self, func):
+        self.func = func
+        self._cache = lru_cache(maxsize=CI_TEST_CACHE_SIZE)(self._cached_call)
+        wraps(func)(self)
+
+    def _cached_call(self, X, Y, Z_tuple, data_wrapped, boolean, kwargs_items):
+        return self.func(
             X=X,
             Y=Y,
             Z=list(Z_tuple),
@@ -46,8 +49,8 @@ def _cached_ci_test(func):
             **dict(kwargs_items),
         )
 
-    def wrapper(X, Y, Z, data, boolean=True, **kwargs):
-        return _cached(
+    def __call__(self, X, Y, Z, data, boolean=True, **kwargs):
+        return self._cache(
             X,
             Y,
             tuple(Z),
@@ -56,7 +59,22 @@ def _cached_ci_test(func):
             tuple(sorted(kwargs.items())),
         )
 
-    return wrapper
+    def __getstate__(self):
+        # Return state for pickling - exclude the cache
+        return {"func": self.func}
+
+    def __setstate__(self, state):
+        # Restore state from pickling - recreate the cache
+        self.func = state["func"]
+        self._cache = lru_cache(maxsize=CI_TEST_CACHE_SIZE)(self._cached_call)
+
+
+def _cached_ci_test(func):
+    """
+    Decorator to apply lru_cache to CI tests. Converts unhashable arguments
+    (DataFrames, lists, kwargs) into hashable types before caching.
+    """
+    return _CachedCITest(func)
 
 
 class CITestRegistry:
