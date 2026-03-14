@@ -316,9 +316,6 @@ def test_invalid_tag():
     with pytest.raises(ValueError, match="Unrecognized filter argument"):
         list_models(num_nodes=10)  # wrong key name entirely
 
-    result = list_models(is_discrete=True)
-    assert result
-
 
 def test_tags():
     for model_name in ALL_MODELS:

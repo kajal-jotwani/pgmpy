@@ -315,9 +315,8 @@ def list_datasets(**filter_tags) -> list[str]:
     ['sachs_discrete']
     """
     valid_tags = set(_BaseDataset._tags.keys())
-    invalid_tags = set(filter_tags.keys()) - valid_tags
 
-    if invalid_tags:
+    if invalid_tags := set(filter_tags.keys()) - valid_tags:
         raise ValueError(
             f"Unrecognized filter argument(s): {sorted(invalid_tags)}. "
             f"Valid filter tags are: {sorted(valid_tags)}."

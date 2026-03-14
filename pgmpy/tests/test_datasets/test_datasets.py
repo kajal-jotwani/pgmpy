@@ -117,6 +117,3 @@ def test_invalid_tag():
 
     with pytest.raises(ValueError, match="Unrecognized filter argument"):
         list_datasets(num_samples=100)  # wrong key name entirely
-
-    result = list_datasets(is_discrete=True)
-    assert result

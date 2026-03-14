@@ -209,9 +209,8 @@ def list_models(**filter_tags) -> list[str]:
     ['dagitty/acid_1996', ...., ]
     """
     valid_tags = set(_BaseExampleModel._tags.keys())
-    invalid_tags = set(filter_tags.keys()) - valid_tags
 
-    if invalid_tags:
+    if invalid_tags := set(filter_tags.keys()) - valid_tags:
         raise ValueError(
             f"Unrecognized filter argument(s): {sorted(invalid_tags)}. "
             f"Valid filter tags are: {sorted(valid_tags)}."
