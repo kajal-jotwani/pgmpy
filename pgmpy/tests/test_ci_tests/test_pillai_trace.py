@@ -10,9 +10,7 @@ from pgmpy.factors.continuous import LinearGaussianCPD
 from pgmpy.models import LinearGaussianBayesianNetwork
 
 
-@unittest.skipIf(
-    os.getenv("GITHUB_ACTIONS") == "true", "Skipping residual tests on GitHub Actions."
-)
+@unittest.skipIf(os.getenv("GITHUB_ACTIONS") == "true", "Skipping residual tests on GitHub Actions.")
 class TestPillaiTrace(unittest.TestCase):
     def setUp(self):
         np.random.seed(42)
@@ -31,12 +29,8 @@ class TestPillaiTrace(unittest.TestCase):
         self.cpd_z2 = LinearGaussianCPD("Z2", [0], 1)
         self.cpd_z3 = LinearGaussianCPD("Z3", [0], 1)
         self.cpd_x = LinearGaussianCPD("X", [0, 0.5, 0.5, 0.5], 1, ["Z1", "Z2", "Z3"])
-        self.cpd_y_indep = LinearGaussianCPD(
-            "Y", [0, 0.5, 0.5, 0.5], 1, ["Z1", "Z2", "Z3"]
-        )
-        self.model_indep.add_cpds(
-            self.cpd_z1, self.cpd_z2, self.cpd_z3, self.cpd_x, self.cpd_y_indep
-        )
+        self.cpd_y_indep = LinearGaussianCPD("Y", [0, 0.5, 0.5, 0.5], 1, ["Z1", "Z2", "Z3"])
+        self.model_indep.add_cpds(self.cpd_z1, self.cpd_z2, self.cpd_z3, self.cpd_x, self.cpd_y_indep)
         self.df_indep = self.model_indep.simulate(n_samples=1000, seed=42)
 
         self.df_indep_cont_cont = self.df_indep.copy()
@@ -83,12 +77,8 @@ class TestPillaiTrace(unittest.TestCase):
                 ("X", "Y"),
             ]
         )
-        self.cpd_y_dep = LinearGaussianCPD(
-            "Y", [0, 0.5, 0.5, 0.5, 0.5], 1, ["Z1", "Z2", "Z3", "X"]
-        )
-        self.model_dep.add_cpds(
-            self.cpd_z1, self.cpd_z2, self.cpd_z3, self.cpd_x, self.cpd_y_dep
-        )
+        self.cpd_y_dep = LinearGaussianCPD("Y", [0, 0.5, 0.5, 0.5, 0.5], 1, ["Z1", "Z2", "Z3", "X"])
+        self.model_dep.add_cpds(self.cpd_z1, self.cpd_z2, self.cpd_z3, self.cpd_x, self.cpd_y_dep)
         self.df_dep = self.model_dep.simulate(n_samples=1000, seed=42)
 
         self.df_dep_cont_cont = self.df_dep.copy()

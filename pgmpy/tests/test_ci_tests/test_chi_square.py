@@ -81,11 +81,7 @@ class TestChiSquare(unittest.TestCase):
             )
         )
         self.assertTrue(self.test("Immigrant", "Sex", [], significance_level=0.05))
-        self.assertFalse(
-            self.test(
-                "Education", "MaritalStatus", ["Age", "Sex"], significance_level=0.05
-            )
-        )
+        self.assertFalse(self.test("Education", "MaritalStatus", ["Age", "Sex"], significance_level=0.05))
 
     def test_exactly_same_vars(self):
         x = np.random.choice([0, 1], size=1000)

@@ -52,25 +52,13 @@ class TestPearsonr(unittest.TestCase):
         self.assertTrue(abs(test.statistic_) > 0.9)
         self.assertTrue(test.p_value_ < 0.05)
 
-        self.assertTrue(
-            Pearsonr(data=self.df_ind)("X", "Y", [], significance_level=0.05)
-        )
-        self.assertTrue(
-            Pearsonr(data=self.df_cind)("X", "Y", ["Z"], significance_level=0.05)
-        )
-        self.assertTrue(
-            Pearsonr(data=self.df_cind_mul)(
-                "X", "Y", ["Z1", "Z2"], significance_level=0.05
-            )
-        )
-        self.assertFalse(
-            Pearsonr(data=self.df_vstruct)("X", "Y", ["Z"], significance_level=0.05)
-        )
+        self.assertTrue(Pearsonr(data=self.df_ind)("X", "Y", [], significance_level=0.05))
+        self.assertTrue(Pearsonr(data=self.df_cind)("X", "Y", ["Z"], significance_level=0.05))
+        self.assertTrue(Pearsonr(data=self.df_cind_mul)("X", "Y", ["Z1", "Z2"], significance_level=0.05))
+        self.assertFalse(Pearsonr(data=self.df_vstruct)("X", "Y", ["Z"], significance_level=0.05))
 
 
-@unittest.skipIf(
-    os.getenv("GITHUB_ACTIONS") == "true", "Skipping residual tests on GitHub Actions."
-)
+@unittest.skipIf(os.getenv("GITHUB_ACTIONS") == "true", "Skipping residual tests on GitHub Actions.")
 class TestPearsonrResidual(unittest.TestCase):
     def setUp(self):
         np.random.seed(42)
@@ -104,9 +92,7 @@ class TestPearsonrResidual(unittest.TestCase):
                 ("X", "Y"),
             ]
         )
-        cpd_y_dep = LinearGaussianCPD(
-            "Y", [0, 0.5, 0.5, 0.5, 0.5], 1, ["Z1", "Z2", "Z3", "X"]
-        )
+        cpd_y_dep = LinearGaussianCPD("Y", [0, 0.5, 0.5, 0.5, 0.5], 1, ["Z1", "Z2", "Z3", "X"])
         model_dep.add_cpds(cpd_z1, cpd_z2, cpd_z3, cpd_x, cpd_y_dep)
         self.df_dep = model_dep.simulate(n_samples=1000, seed=42)
 

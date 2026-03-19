@@ -8,9 +8,7 @@ from pgmpy.factors.continuous import LinearGaussianCPD
 from pgmpy.models import LinearGaussianBayesianNetwork
 
 
-@unittest.skipIf(
-    os.getenv("GITHUB_ACTIONS") == "true", "Skipping residual tests on GitHub Actions."
-)
+@unittest.skipIf(os.getenv("GITHUB_ACTIONS") == "true", "Skipping residual tests on GitHub Actions.")
 class TestGCM(unittest.TestCase):
     def setUp(self):
         np.random.seed(42)
@@ -44,9 +42,7 @@ class TestGCM(unittest.TestCase):
                 ("X", "Y"),
             ]
         )
-        cpd_y_dep = LinearGaussianCPD(
-            "Y", [0, 0.5, 0.5, 0.5, 0.5], 1, ["Z1", "Z2", "Z3", "X"]
-        )
+        cpd_y_dep = LinearGaussianCPD("Y", [0, 0.5, 0.5, 0.5, 0.5], 1, ["Z1", "Z2", "Z3", "X"])
         model_dep.add_cpds(cpd_z1, cpd_z2, cpd_z3, cpd_x, cpd_y_dep)
         self.df_dep = model_dep.simulate(n_samples=1000, seed=42)
 
