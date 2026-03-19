@@ -27,24 +27,30 @@ class IndependenceMatch(_BaseCITest):
         self.independencies = independencies
         super().__init__()
 
-    def is_independent(
-        self,
-        X: str,
-        Y: str,
-        Z: list | tuple = (),
-        significance_level: float = 0.05,
-    ) -> bool:
+    def run_test(self, X, Y, Z):
         """
-        Test independence assertion.
+        Check whether the independence assertion X ⊥⊥ Y | Z is present.
+
+        Parameters
+        ----------
+        X : str
+            The first variable.
+        Y : str
+            The second variable.
+        Z : list
+            Conditioning variables.
 
         Returns
         -------
-        bool
-            True if the independence assertion is present in `independencies`, else False.
+        statistic : None
+            No test statistic (this is a lookup, not a statistical test).
+        p_value : float
+            1.0 if the assertion is found, 0.0 otherwise.
         """
-        self._validate_inputs(X, Y, Z)
-
         if self.independencies is None:
             raise ValueError("independencies must be provided in __init__.")
 
-        return IndependenceAssertion(X, Y, list(Z)) in self.independencies
+        self.statistic_ = None
+        self.p_value_ = 1.0 if IndependenceAssertion(X, Y, list(Z)) in self.independencies else 0.0
+
+        return self.statistic_, self.p_value_

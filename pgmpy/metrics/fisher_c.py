@@ -87,12 +87,12 @@ class FisherC(_BaseUnsupervisedMetric):
         for u, v in comb_iter:
             if not ((u in causal_graph[v]) or (v in causal_graph[u])):
                 Z = set(causal_graph.predecessors(u)).union(causal_graph.predecessors(v))
-                test_results = ci_test(X=u, Y=v, Z=Z, data=X, boolean=False)
-                cis.append([u, v, Z, test_results[1]])
+                ci_test.is_independent(X=u, Y=v, Z=list(Z))
+                cis.append([u, v, Z, ci_test.p_value_])
         cis = pd.DataFrame(cis, columns=["u", "v", "cond_vars", "p_value"])
         cis.loc[:, "p_value"] = cis.loc[:, "p_value"].clip(lower=1e-6)
 
-        C = -2 * np.log(cis.loc[:, "p-value"]).sum()
+        C = -2 * np.log(cis.loc[:, "p_value"]).sum()
         p_value = 1 - stats.chi2.cdf(C, df=2 * cis.shape[0])
         rmsea = np.nan
 
