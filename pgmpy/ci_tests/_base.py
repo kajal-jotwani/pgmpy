@@ -106,14 +106,14 @@ class _BaseCITest(BaseObject):
 
 def get_ci_test(test=None, data=None):
     """
-    Return an instantiated CI test object given a test name, class, instance, or data.
+    Return an instantiated CI test object given a test name, instance, or data.
 
-    This is the recommended factory for obtaining a CI test. It supports four calling
-    patterns:
+    This is the recommended factory for obtaining a CI test. It supports four
+    calling patterns:
 
     1. **Pass-through**: if ``test`` is already a :class:`_BaseCITest` instance, it is
        returned as-is.
-    2. **Callable**: if ``test`` is any other callable (e.g. a legacy function), it is
+    2. **Callable**: if ``test`` is any other callable (e.g. a custom function), it is
        returned as-is.
     3. **By name**: if ``test`` is a string, the registered CI test whose ``name`` tag
        matches (case-insensitive) is instantiated and returned.
@@ -181,6 +181,9 @@ def get_ci_test(test=None, data=None):
     """
 
     from pgmpy.utils import get_dataset_type
+
+    if isinstance(test, _BaseCITest):
+        return test
 
     if callable(test):
         return test
