@@ -115,9 +115,7 @@ class PillaiTrace(_BaseCITest):
         # Step 3: Compute the residuals
         def get_residuals(col_name, pred, cat_index):
             if data.loc[:, col_name].dtype == "category":
-                dummies = pd.get_dummies(data.loc[:, col_name]).loc[
-                    :, cat_index.categories[cat_index.codes]
-                ]
+                dummies = pd.get_dummies(data.loc[:, col_name]).loc[:, cat_index.categories[cat_index.codes]]
                 # Drop last column to avoid multicollinearity
                 return (dummies - pred).iloc[:, :-1]
             else:

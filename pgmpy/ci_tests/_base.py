@@ -1,5 +1,3 @@
-from typing import Union
-
 from skbase.base import BaseObject
 from skbase.lookup import all_objects
 
@@ -20,7 +18,7 @@ class _BaseCITest(BaseObject):
         self,
         X: str,
         Y: str,
-        Z: Union[list, tuple] = (),
+        Z: list | tuple = (),
         significance_level: float = 0.05,
     ):
         return self.is_independent(X=X, Y=Y, Z=Z, significance_level=significance_level)
@@ -29,7 +27,7 @@ class _BaseCITest(BaseObject):
         self,
         X: str,
         Y: str,
-        Z: Union[list, tuple] = (),
+        Z: list | tuple = (),
         significance_level: float = 0.05,
     ) -> bool:
         """
@@ -103,9 +101,7 @@ class _BaseCITest(BaseObject):
             raise ValueError(f"Z must be a list or tuple. Got {type(Z)}.")
 
         if X in Z or Y in Z:
-            raise ValueError(
-                f"X and Y cannot appear in Z. Found {X if X in Z else Y} in Z."
-            )
+            raise ValueError(f"X and Y cannot appear in Z. Found {X if X in Z else Y} in Z.")
 
 
 def get_ci_test(test=None, data=None):
@@ -191,9 +187,7 @@ def get_ci_test(test=None, data=None):
 
     if test is None:
         if data is None:
-            raise ValueError(
-                "Cannot determine CI test: both `test` and `data` are None."
-            )
+            raise ValueError("Cannot determine CI test: both `test` and `data` are None.")
 
         var_type = get_dataset_type(data)
         filter_tags = {"default_for": var_type}
@@ -214,9 +208,7 @@ def get_ci_test(test=None, data=None):
         cls = tests[0]
         if cls.get_class_tag("requires_data", tag_value_default=True):
             if data is None:
-                raise ValueError(
-                    f"CI test '{cls.__name__}' requires data, but data is None."
-                )
+                raise ValueError(f"CI test '{cls.__name__}' requires data, but data is None.")
             return cls(data=data)
         return cls()
     raise ValueError(f"Unknown CI test: {test!r}")

@@ -1,5 +1,3 @@
-from typing import Union
-
 import numpy as np
 import pandas as pd
 from scipy import stats
@@ -52,7 +50,7 @@ class PearsonrEquivalence(Pearsonr):
         self,
         X: str,
         Y: str,
-        Z: Union[list, tuple] = (),
+        Z: list | tuple = (),
         significance_level: float = 0.05,
     ) -> bool:
         """

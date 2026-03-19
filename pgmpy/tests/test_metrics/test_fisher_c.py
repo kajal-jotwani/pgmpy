@@ -52,7 +52,7 @@ def models_and_data(rng):
 )
 def test_fisherc(models_and_data, model_name, graph_key, ndigits, expected):
     bundle = models_and_data[model_name]
-    p_value = FisherC(ci_test=chi_square).evaluate(X=bundle["data"], causal_graph=bundle[graph_key])
+    p_value = FisherC(ci_test="chi_square").evaluate(X=bundle["data"], causal_graph=bundle[graph_key])
     assert round(p_value, ndigits) == expected
 
 

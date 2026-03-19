@@ -1,5 +1,3 @@
-from typing import Union
-
 import numpy as np
 import pandas as pd
 from scipy import stats
@@ -70,7 +68,7 @@ class PowerDivergence(_BaseCITest):
         "requires_data": True,
     }
 
-    def __init__(self, data: pd.DataFrame, lambda_: Union[str, float] = "cressie-read"):
+    def __init__(self, data: pd.DataFrame, lambda_: str | float = "cressie-read"):
         self.data = data
         self.lambda_ = lambda_
         super().__init__()
@@ -109,24 +107,14 @@ class PowerDivergence(_BaseCITest):
                 ).reshape(len(unique_x), len(unique_y))
 
                 # If all values of a column in the contingency table are zeros, skip the test.
-                if any(contingency.sum(axis=0) == 0) or any(
-                    contingency.sum(axis=1) == 0
-                ):
+                if any(contingency.sum(axis=0) == 0) or any(contingency.sum(axis=1) == 0):
                     if isinstance(z_state, str):
-                        logger.info(
-                            f"Skipping the test {X} _|_ {Y} | {Z[0]}={z_state}. Not enough samples"
-                        )
+                        logger.info(f"Skipping the test {X} _|_ {Y} | {Z[0]}={z_state}. Not enough samples")
                     else:
-                        z_str = ", ".join(
-                            [f"{var}={state}" for var, state in zip(Z, z_state)]
-                        )
-                        logger.info(
-                            f"Skipping the test {X} _|_ {Y} | {z_str}. Not enough samples"
-                        )
+                        z_str = ", ".join([f"{var}={state}" for var, state in zip(Z, z_state)])
+                        logger.info(f"Skipping the test {X} _|_ {Y} | {z_str}. Not enough samples")
                 else:
-                    c, _, d, _ = stats.chi2_contingency(
-                        contingency, lambda_=self.lambda_
-                    )
+                    c, _, d, _ = stats.chi2_contingency(contingency, lambda_=self.lambda_)
                     chi += c
                     dof += d
             p_value = 1 - stats.chi2.cdf(chi, df=dof)

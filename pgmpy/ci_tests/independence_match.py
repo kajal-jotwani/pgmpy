@@ -1,5 +1,3 @@
-from typing import Union
-
 from pgmpy.independencies import IndependenceAssertion
 
 from ._base import _BaseCITest
@@ -33,7 +31,7 @@ class IndependenceMatch(_BaseCITest):
         self,
         X: str,
         Y: str,
-        Z: Union[list, tuple] = (),
+        Z: list | tuple = (),
         significance_level: float = 0.05,
     ) -> bool:
         """

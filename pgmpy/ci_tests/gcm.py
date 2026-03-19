@@ -60,12 +60,8 @@ class GCM(_BaseCITest):
         data_aug = data.assign(intercept=np.ones(data.shape[0]))
 
         # Step 2: Compute the linear regression and the residuals
-        X_coef = np.linalg.lstsq(
-            data_aug.loc[:, Z_aug], data_aug.loc[:, X], rcond=None
-        )[0]
-        Y_coef = np.linalg.lstsq(
-            data_aug.loc[:, Z_aug], data_aug.loc[:, Y], rcond=None
-        )[0]
+        X_coef = np.linalg.lstsq(data_aug.loc[:, Z_aug], data_aug.loc[:, X], rcond=None)[0]
+        Y_coef = np.linalg.lstsq(data_aug.loc[:, Z_aug], data_aug.loc[:, Y], rcond=None)[0]
         res_x = data_aug.loc[:, X] - data_aug.loc[:, Z_aug].dot(X_coef)
         res_y = data_aug.loc[:, Y] - data_aug.loc[:, Z_aug].dot(Y_coef)
 
