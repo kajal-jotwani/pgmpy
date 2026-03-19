@@ -48,7 +48,7 @@ class PearsonrEquivalence(Pearsonr):
         self.delta_threshold = delta_threshold
         super().__init__(data=data)
 
-    def test(
+    def is_independent(
         self,
         X: str,
         Y: str,
@@ -68,23 +68,23 @@ class PearsonrEquivalence(Pearsonr):
         """
         self._validate_inputs(X, Y, Z)
 
-        self._compute_statistic(X=X, Y=Y, Z=list(Z))
+        self.run_test(X=X, Y=Y, Z=list(Z))
 
         return self.p_value_ < significance_level
 
-    def _compute_statistic(
+    def run_test(
         self,
         X: str,
         Y: str,
         Z: list,
-    ) -> None:
+    ):
         """
         Compute Pearson equivalence statistic and p-value.
 
         Sets ``self.statistic_`` (Fisher z-transformed partial correlation) and ``self.p_value_``.
         """
         # Step 2: Compute Partial Pearson Correlation via parent and clip to avoid infinities
-        super()._compute_statistic(X, Y, Z)
+        super().run_test(X, Y, Z)
         rho = np.clip(self.statistic_, -0.999999, 0.999999)
 
         # Step 3: Fisher Z-Transformation
@@ -107,3 +107,5 @@ class PearsonrEquivalence(Pearsonr):
 
         self.statistic_ = coeff
         self.p_value_ = max(p_value_lower, p_value_upper)
+
+        return self.statistic_, self.p_value_

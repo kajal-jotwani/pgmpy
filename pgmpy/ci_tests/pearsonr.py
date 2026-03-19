@@ -42,12 +42,12 @@ class Pearsonr(_BaseCITest):
         self.data = data
         super().__init__()
 
-    def _compute_statistic(
+    def run_test(
         self,
         X: str,
         Y: str,
         Z: list,
-    ) -> None:
+    ):
         """
         Compute Pearson correlation coefficient and p-value.
 
@@ -70,3 +70,5 @@ class Pearsonr(_BaseCITest):
 
         self.statistic_ = coef
         self.p_value_ = p_value
+
+        return self.statistic_, self.p_value_

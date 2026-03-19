@@ -6,7 +6,7 @@ from skbase.lookup import all_objects
 
 class _BaseCITest(BaseObject):
     """
-    Base class for all Conditional Independence (CI) tests. Subclasses must implement `_compute_statistic`.
+    Base class for all Conditional Independence (CI) tests. Subclasses must implement `run_test`.
     """
 
     _tags = {
@@ -23,9 +23,9 @@ class _BaseCITest(BaseObject):
         Z: Union[list, tuple] = (),
         significance_level: float = 0.05,
     ):
-        return self.test(X=X, Y=Y, Z=Z, significance_level=significance_level)
+        return self.is_independent(X=X, Y=Y, Z=Z, significance_level=significance_level)
 
-    def test(
+    def is_independent(
         self,
         X: str,
         Y: str,
@@ -33,7 +33,7 @@ class _BaseCITest(BaseObject):
         significance_level: float = 0.05,
     ) -> bool:
         """
-        Perform the conditional independence test.
+        Perform the conditional independence test and return a boolean result.
 
         Parameters
         ----------
@@ -65,14 +65,35 @@ class _BaseCITest(BaseObject):
         for parallel computation.
         """
         self._validate_inputs(X, Y, Z)
-        self._compute_statistic(X=X, Y=Y, Z=list(Z))
+        self.run_test(X=X, Y=Y, Z=list(Z))
 
         return self.p_value_ >= significance_level
 
-    def _compute_statistic(self, X, Y, Z):
-        raise NotImplementedError(
-            f"{self.__class__.__name__} must implement _compute_statistic."
-        )
+    def run_test(self, X, Y, Z):
+        """
+        Run the statistical test and return the test statistic and p-value.
+
+        Subclasses must implement this method. It should set ``self.statistic_``
+        and ``self.p_value_`` as attributes, and may set additional attributes
+        (e.g. ``self.dof_``).
+
+        Parameters
+        ----------
+        X : str
+            The first variable for testing the independence condition X ⊥⊥ Y | Z.
+        Y : str
+            The second variable for testing the independence condition X ⊥⊥ Y | Z.
+        Z : list
+            A list of conditional variables for testing the condition X ⊥⊥ Y | Z.
+
+        Returns
+        -------
+        statistic : float
+            The test statistic.
+        p_value : float
+            The p-value for the test.
+        """
+        raise NotImplementedError(f"{self.__class__.__name__} must implement run_test.")
 
     def _validate_inputs(self, X, Y, Z):
         if X == Y:

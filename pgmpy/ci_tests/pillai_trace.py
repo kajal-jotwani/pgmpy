@@ -92,12 +92,12 @@ class PillaiTrace(_BaseCITest):
 
         return pred_x, pred_y, x_cat_index, y_cat_index
 
-    def _compute_statistic(
+    def run_test(
         self,
         X: str,
         Y: str,
         Z: list,
-    ) -> None:
+    ):
         """
         Compute Pillai's trace statistic and p-value.
 
@@ -150,3 +150,5 @@ class PillaiTrace(_BaseCITest):
 
         self.statistic_ = coef
         self.p_value_ = p_value
+
+        return self.statistic_, self.p_value_

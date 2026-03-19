@@ -75,12 +75,12 @@ class PowerDivergence(_BaseCITest):
         self.lambda_ = lambda_
         super().__init__()
 
-    def _compute_statistic(
+    def run_test(
         self,
         X: str,
         Y: str,
         Z: list,
-    ) -> None:
+    ):
         """
         Compute power divergence statistic, p-value, and degrees of freedom.
 
@@ -134,3 +134,5 @@ class PowerDivergence(_BaseCITest):
         self.statistic_ = chi
         self.p_value_ = p_value
         self.dof_ = dof
+
+        return self.statistic_, self.p_value_

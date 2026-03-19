@@ -29,7 +29,7 @@ class IndependenceMatch(_BaseCITest):
         self.independencies = independencies
         super().__init__()
 
-    def test(
+    def is_independent(
         self,
         X: str,
         Y: str,

@@ -43,12 +43,12 @@ class GCM(_BaseCITest):
         self.data = data
         super().__init__()
 
-    def _compute_statistic(
+    def run_test(
         self,
         X: str,
         Y: str,
         Z: list,
-    ) -> None:
+    ):
         """
         Compute GCM statistic and p-value.
 
@@ -78,3 +78,5 @@ class GCM(_BaseCITest):
 
         self.statistic_ = t_stat
         self.p_value_ = p_value
+
+        return self.statistic_, self.p_value_
