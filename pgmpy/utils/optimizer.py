@@ -1,5 +1,6 @@
 from math import isclose
-from pgmpy.utils._safe_import import _safe_import
+
+from skbase.utils.dependencies import _safe_import
 
 from pgmpy.global_vars import logger
 
@@ -25,9 +26,7 @@ def pinverse(t):
     return t_inv
 
 
-def optimize(
-    loss_fn, params={}, loss_args={}, opt="adam", max_iter=10000, exit_delta=1e-4
-):
+def optimize(loss_fn, params={}, loss_args={}, opt="adam", max_iter=10000, exit_delta=1e-4):
     """
     Generic function to optimize loss functions.
 

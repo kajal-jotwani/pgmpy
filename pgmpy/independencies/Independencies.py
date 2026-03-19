@@ -1,9 +1,7 @@
-# -*- coding: utf-8 -*-
-
 import itertools
 
 
-class Independencies(object):
+class Independencies:
     """
     Base class for independencies.
     independencies class represents a set of Conditional Independence
@@ -26,13 +24,15 @@ class Independencies(object):
     Creating an independencies object with one independence assertion:
     Random Variable X is independent of Y
 
-    >>> independencies = independencies(["X", "Y"])
+    >>> from pgmpy.independencies import Independencies
+    >>>
+    >>> independencies = Independencies(["X", "Y"])
 
     Creating an independencies object with three conditional
     independence assertions:
     First assertion is Random Variable X is independent of Y given Z.
 
-    >>> independencies = independencies(
+    >>> independencies = Independencies(
     ...     ["X", "Y", "Z"], ["a", ["b", "c"], "d"], ["l", ["m", "n"], "o"]
     ... )
 
@@ -59,12 +59,8 @@ class Independencies(object):
     def __eq__(self, other):
         if not isinstance(other, Independencies):
             return False
-        return all(
-            independency in other.get_assertions()
-            for independency in self.get_assertions()
-        ) and all(
-            independency in self.get_assertions()
-            for independency in other.get_assertions()
+        return all(independency in other.get_assertions() for independency in self.get_assertions()) and all(
+            independency in self.get_assertions() for independency in other.get_assertions()
         )
 
     def __ne__(self, other):
@@ -140,13 +136,9 @@ class Independencies(object):
                 self.independencies.append(assertion)
             else:
                 try:
-                    self.independencies.append(
-                        IndependenceAssertion(assertion[0], assertion[1], assertion[2])
-                    )
+                    self.independencies.append(IndependenceAssertion(assertion[0], assertion[1], assertion[2]))
                 except IndexError:
-                    self.independencies.append(
-                        IndependenceAssertion(assertion[0], assertion[1])
-                    )
+                    self.independencies.append(IndependenceAssertion(assertion[0], assertion[1]))
 
     def closure(self):
         """
@@ -216,10 +208,7 @@ class Independencies(object):
             if single_var(ind.event2):
                 return []
             else:
-                return [
-                    IndependenceAssertion(ind.event1, ind.event2 - {elem}, ind.event3)
-                    for elem in ind.event2
-                ]
+                return [IndependenceAssertion(ind.event1, ind.event2 - {elem}, ind.event3) for elem in ind.event2]
 
         @apply_left_and_right
         def sg2(ind):
@@ -228,10 +217,7 @@ class Independencies(object):
                 return []
             else:
                 return [
-                    IndependenceAssertion(
-                        ind.event1, ind.event2 - {elem}, {elem} | ind.event3
-                    )
-                    for elem in ind.event2
+                    IndependenceAssertion(ind.event1, ind.event2 - {elem}, {elem} | ind.event3) for elem in ind.event2
                 ]
 
         @apply_left_and_right
@@ -297,9 +283,7 @@ class Independencies(object):
             return False
 
         implications = self.closure().get_assertions()
-        return all(
-            ind in implications for ind in entailed_independencies.get_assertions()
-        )
+        return all(ind in implications for ind in entailed_independencies.get_assertions())
 
     def is_equivalent(self, other):
         """
@@ -361,9 +345,9 @@ class Independencies(object):
                         existing_temp = Independencies(existing_assertion)
 
                         if existing_temp != assertion_temp:
-                            remove_old = not existing_temp.entails(
-                                assertion_temp
-                            ) and assertion_temp.entails(existing_temp)
+                            remove_old = not existing_temp.entails(assertion_temp) and assertion_temp.entails(
+                                existing_temp
+                            )
 
                             if remove_old:
                                 reduced_assertions.remove(existing_assertion)
@@ -396,7 +380,7 @@ class Independencies(object):
         pass
 
 
-class IndependenceAssertion(object):
+class IndependenceAssertion:
     r"""
     Represents Conditional Independence or Independence assertion.
 
@@ -455,9 +439,7 @@ class IndependenceAssertion(object):
         if any([event2, event3]) and not event1:
             raise ValueError("event1 needs to be specified")
         if event3 and not all([event1, event2]):
-            raise ValueError(
-                "event1" if not event1 else "event2" + " needs to be specified"
-            )
+            raise ValueError("event1" if not event1 else "event2" + " needs to be specified")
 
         self.event1 = frozenset(self._return_list_if_not_collection(event1))
         self.event2 = frozenset(self._return_list_if_not_collection(event2))
