@@ -408,7 +408,7 @@ class TestDAGCreation(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Invalid n_edges="):
             DAG.get_random(n_nodes=n_nodes, n_edges=max_edges + 1)
 
-        with self.assertRaisesRegex(ValueError, "node_names length"):
+        with self.assertRaisesRegex(ValueError, "Length of node_names"):
             DAG.get_random(n_nodes=n_nodes, n_edges=3, node_names=["a", "b", "c"])
 
     def tearDown(self):
