@@ -1366,6 +1366,9 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         if node_names is None:
             node_names = [f"X_{i}" for i in range(n_nodes)]
 
+        if len(node_names) != n_nodes:
+            raise ValueError(f"Length of node_names ({len(node_names)}) must be equal to n_nodes ({n_nodes}).")
+
         if n_edges is not None:
             max_edges = n_nodes * (n_nodes - 1) // 2
             if n_edges < 0 or n_edges > max_edges:

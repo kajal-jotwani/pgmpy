@@ -389,7 +389,10 @@ class TestDAGCreation(unittest.TestCase):
         self.assertTrue(nx.is_directed_acyclic_graph(dag))
 
         dag = DAG.get_random(n_nodes=6, n_edges=4, latents=True, seed=3)
-        self.assertTrue(isinstance(dag.latents, set))
+        self.assertIsInstance(dag.latents, set)
+        self.assertTrue(dag.latents.issubset(dag.nodes()))
+        self.assertTrue(nx.is_directed_acyclic_graph(dag))
+        self.assertEqual(len(dag.edges()), 4)
 
         dag_a = DAG.get_random(n_nodes=5, n_edges=4, seed=42)
         dag_b = DAG.get_random(n_nodes=5, n_edges=4, seed=42)
@@ -404,6 +407,9 @@ class TestDAGCreation(unittest.TestCase):
 
         with self.assertRaisesRegex(ValueError, "Invalid n_edges="):
             DAG.get_random(n_nodes=n_nodes, n_edges=max_edges + 1)
+
+        with self.assertRaisesRegex(ValueError, "node_names length"):
+            DAG.get_random(n_nodes=n_nodes, n_edges=3, node_names=["a", "b", "c"])
 
     def tearDown(self):
         del self.graph
