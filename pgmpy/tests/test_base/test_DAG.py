@@ -357,6 +357,54 @@ class TestDAGCreation(unittest.TestCase):
             self.assertTrue(nx.is_directed_acyclic_graph(dag))
             self.assertTrue(len(dag.latents) == 0)
 
+    def test_random_dag_fixed_n_edges(self):
+        n_nodes = 8
+        max_edges = n_nodes * (n_nodes - 1) // 2
+
+        for n_edges in [0, 5, max_edges]:
+            dag = DAG.get_random(n_nodes=n_nodes, edge_prob=0.0, n_edges=n_edges, seed=7)
+            self.assertEqual(len(dag.nodes()), n_nodes)
+            self.assertEqual(len(dag.edges()), n_edges)
+            self.assertTrue(nx.is_directed_acyclic_graph(dag))
+
+        node_names = [
+            "a",
+            "aa",
+            "aaa",
+            "aaaa",
+            "aaaaa",
+            "aaaaaa",
+            "aaaaaaa",
+            "aaaaaaaa",
+        ]
+        dag = DAG.get_random(
+            n_nodes=n_nodes,
+            edge_prob=1.0,
+            n_edges=6,
+            node_names=node_names,
+            seed=11,
+        )
+        self.assertEqual(sorted(dag.nodes()), node_names)
+        self.assertEqual(len(dag.edges()), 6)
+        self.assertTrue(nx.is_directed_acyclic_graph(dag))
+
+        dag = DAG.get_random(n_nodes=6, n_edges=4, latents=True, seed=3)
+        self.assertTrue(isinstance(dag.latents, set))
+
+        dag_a = DAG.get_random(n_nodes=5, n_edges=4, seed=42)
+        dag_b = DAG.get_random(n_nodes=5, n_edges=4, seed=42)
+        self.assertEqual(set(dag_a.edges()), set(dag_b.edges()))
+
+    def test_random_dag_fixed_n_edges_invalid(self):
+        n_nodes = 5
+        max_edges = n_nodes * (n_nodes - 1) // 2
+
+        with self.assertRaisesRegex(ValueError, "Invalid n_edges="):
+            DAG.get_random(n_nodes=n_nodes, n_edges=-1)
+
+        with self.assertRaisesRegex(ValueError, "Invalid n_edges="):
+            DAG.get_random(n_nodes=n_nodes, n_edges=max_edges + 1)
+
     def tearDown(self):
         del self.graph
 
