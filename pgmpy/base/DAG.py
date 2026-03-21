@@ -1310,30 +1310,30 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
     @staticmethod
     def get_random(
         n_nodes=5,
-        edge_prob=0.5,
         n_edges: int | None = None,
+        edge_prob=0.5,
         node_names: list[Hashable] | None = None,
         latents=False,
         seed: int | None = None,
     ) -> DAG:
         """
-        Returns a randomly generated DAG with `n_nodes` number of nodes with
-        edge probability being `edge_prob`.
+        Returns a randomly generated DAG with `n_nodes` number of nodes.
 
-        When `n_edges` is specified, generates a DAG with exactly that many
-        edges and `edge_prob` is ignored.
+        If `n_edges` is specified, generates a DAG with exactly that many edges
+        and `edge_prob` is ignored.
+        If `n_edges` is None, edges are added randomly with probability `edge_prob`.
 
         Parameters
         ----------
         n_nodes: int
             The number of nodes in the randomly generated DAG.
 
+        n_edges: int or None (default: None)
+            The number of edges in the randomly generated DAG.
+
         edge_prob: float
             The probability of edge between any two nodes in the topologically
-            sorted DAG.
-
-        n_edges: int (default: None)
-            The number of edges in the randomly generated DAG.
+            sorted DAG. Ignored if `n_edges` is specified.
 
         node_names: list (default: None)
             A list of variables names to use in the random graph.
@@ -1360,6 +1360,10 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         [('X_0', 'X_2'), ('X_0', 'X_5'), ('X_0', 'X_6'), ('X_0', 'X_7'),
          ('X_1', 'X_3'), ('X_1', 'X_8'), ('X_2', 'X_3'), ('X_2', 'X_4'),
          ('X_4', 'X_5'), ('X_7', 'X_9')]
+
+        >>> dag = DAG.get_random(n_nodes=5, n_edges=6, seed=42)
+        >>> dag.number_of_edges()
+        6
         """
         gen = np.random.default_rng(seed=seed)
 
@@ -1368,30 +1372,27 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
 
         if len(node_names) != n_nodes:
             raise ValueError(f"Length of node_names ({len(node_names)}) must be equal to n_nodes ({n_nodes}).")
-
         if n_edges is not None:
             max_edges = n_nodes * (n_nodes - 1) // 2
             if n_edges < 0 or n_edges > max_edges:
                 raise ValueError(f"Invalid n_edges={n_edges}. For n_nodes={n_nodes}, valid range is [0, {max_edges}].")
 
-            # Randomly shuffle node ordering to avoid structural bias.
-            shuffled = list(node_names)
-            gen.shuffle(shuffled)
+            # Shuffle upper triangle indices to avoid structural bias
+            upper_idx = np.array([(i, j) for i in range(n_nodes) for j in range(i + 1, n_nodes)])
+            gen.shuffle(upper_idx)
 
-            # All valid forward edges - i < j ensures acyclicity
-            candidates = [(shuffled[i], shuffled[j]) for i in range(n_nodes) for j in range(i + 1, n_nodes)]
-
-            chosen_idx = gen.choice(len(candidates), size=n_edges, replace=False)
-            dag = DAG(ebunch=[candidates[k] for k in chosen_idx])
+            adj_mat = np.zeros((n_nodes, n_nodes), dtype=int)
+            for i, j in upper_idx[:n_edges]:
+                adj_mat[i, j] = 1
 
         else:
             # Step 1: Generate a matrix of 0 and 1. Prob of choosing 1 = edge_prob
             adj_mat = gen.choice([0, 1], size=(n_nodes, n_nodes), p=[1 - edge_prob, edge_prob])
 
-            # Step 2: Use the upper triangular part of the matrix as adjacency.
-            adj_pd = pd.DataFrame(np.triu(adj_mat, k=1), columns=node_names, index=node_names)
-            nx_dag = nx.from_pandas_adjacency(adj_pd, create_using=nx.DiGraph)
-            dag = DAG(nx_dag)
+        # Step 2: Use the upper triangular part of the matrix as adjacency.
+        adj_pd = pd.DataFrame(np.triu(adj_mat, k=1), columns=node_names, index=node_names)
+        nx_dag = nx.from_pandas_adjacency(adj_pd, create_using=nx.DiGraph)
+        dag = DAG(nx_dag)
 
         dag.add_nodes_from(node_names)
 

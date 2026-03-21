@@ -358,14 +358,22 @@ class TestDAGCreation(unittest.TestCase):
             self.assertTrue(len(dag.latents) == 0)
 
     def test_random_dag_fixed_n_edges(self):
+        def assert_dag_props(dag, exp_nodes, exp_edges):
+            self.assertEqual(len(dag.nodes()), exp_nodes)
+            self.assertEqual(len(dag.edges()), exp_edges)
+            self.assertTrue(nx.is_directed_acyclic_graph(dag))
+
         n_nodes = 8
         max_edges = n_nodes * (n_nodes - 1) // 2
 
         for n_edges in [0, 5, max_edges]:
-            dag = DAG.get_random(n_nodes=n_nodes, edge_prob=0.0, n_edges=n_edges, seed=7)
-            self.assertEqual(len(dag.nodes()), n_nodes)
-            self.assertEqual(len(dag.edges()), n_edges)
-            self.assertTrue(nx.is_directed_acyclic_graph(dag))
+            dag = DAG.get_random(n_nodes=n_nodes, n_edges=n_edges, seed=7)
+            assert_dag_props(dag, n_nodes, n_edges)
+
+        # n_edges takes priority over edge_prob.
+        dag_low = DAG.get_random(n_nodes=n_nodes, n_edges=6, edge_prob=0.0, seed=11)
+        dag_high = DAG.get_random(n_nodes=n_nodes, n_edges=6, edge_prob=1.0, seed=11)
+        self.assertEqual(set(dag_low.edges()), set(dag_high.edges()))
 
         node_names = [
             "a",
@@ -379,20 +387,17 @@ class TestDAGCreation(unittest.TestCase):
         ]
         dag = DAG.get_random(
             n_nodes=n_nodes,
-            edge_prob=1.0,
             n_edges=6,
             node_names=node_names,
             seed=11,
         )
         self.assertEqual(sorted(dag.nodes()), node_names)
-        self.assertEqual(len(dag.edges()), 6)
-        self.assertTrue(nx.is_directed_acyclic_graph(dag))
+        assert_dag_props(dag, n_nodes, 6)
 
         dag = DAG.get_random(n_nodes=6, n_edges=4, latents=True, seed=3)
         self.assertIsInstance(dag.latents, set)
         self.assertTrue(dag.latents.issubset(dag.nodes()))
-        self.assertTrue(nx.is_directed_acyclic_graph(dag))
-        self.assertEqual(len(dag.edges()), 4)
+        assert_dag_props(dag, 6, 4)
 
         dag_a = DAG.get_random(n_nodes=5, n_edges=4, seed=42)
         dag_b = DAG.get_random(n_nodes=5, n_edges=4, seed=42)
