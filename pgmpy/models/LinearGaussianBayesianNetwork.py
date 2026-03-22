@@ -967,6 +967,7 @@ class LinearGaussianBayesianNetwork(DAG):
     @staticmethod
     def get_random(
         n_nodes: int = 5,
+        n_edges: int | None = None,
         edge_prob: float = 0.5,
         node_names: list | None = None,
         latents: bool = False,
@@ -984,9 +985,13 @@ class LinearGaussianBayesianNetwork(DAG):
             Number of nodes.
             The number of nodes in the randomly generated DAG.
 
+        n_edges: int or None (default: None)
+            The number of edges in the randomly generated DAG.
+
+        edge_prob: float
             Probability of an edge (consistent with a topological order).
             The probability of edge between any two nodes in the topologically
-            sorted DAG.
+            sorted DAG. Ignored if `n_edges` is specified.
 
         node_names: list (default: None)
             A list of variables names to use in the random graph.
@@ -1025,7 +1030,13 @@ class LinearGaussianBayesianNetwork(DAG):
         <LinearGaussianCPD: P(2) = N(-0.023; 0.166) at 0x2732d8d5f40,
         <LinearGaussianCPD: P(4 | 2, 3) = N(-0.24*2 + -0.907*3 + 0.625; 0.48) at 0x2737fecdaf0]
         """
-        dag = DAG.get_random(n_nodes=n_nodes, edge_prob=edge_prob, node_names=node_names, latents=latents)
+        dag = DAG.get_random(
+            n_nodes=n_nodes,
+            n_edges=n_edges,
+            edge_prob=edge_prob,
+            node_names=node_names,
+            latents=latents,
+        )
         lgbn_model = LinearGaussianBayesianNetwork(dag.edges(), latents=dag.latents)
         lgbn_model.add_nodes_from(dag.nodes())
 
