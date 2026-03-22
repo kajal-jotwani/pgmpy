@@ -1377,13 +1377,11 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
             if n_edges < 0 or n_edges > max_edges:
                 raise ValueError(f"Invalid n_edges={n_edges}. For n_nodes={n_nodes}, valid range is [0, {max_edges}].")
 
-            # Shuffle upper triangle indices to avoid structural bias
-            upper_idx = np.array([(i, j) for i in range(n_nodes) for j in range(i + 1, n_nodes)])
-            gen.shuffle(upper_idx)
+            upper_i, upper_j = np.triu_indices(n_nodes, k=1)
+            chosen = gen.choice(len(upper_i), size=n_edges, replace=False)
 
             adj_mat = np.zeros((n_nodes, n_nodes), dtype=int)
-            for i, j in upper_idx[:n_edges]:
-                adj_mat[i, j] = 1
+            adj_mat[upper_i[chosen], upper_j[chosen]] = 1
 
         else:
             # Step 1: Generate a matrix of 0 and 1. Prob of choosing 1 = edge_prob
