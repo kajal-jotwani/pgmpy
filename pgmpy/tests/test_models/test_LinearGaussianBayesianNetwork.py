@@ -428,7 +428,7 @@ class TestLGBNMethods(unittest.TestCase):
         self.assertIsInstance(model1, LinearGaussianBayesianNetwork, "Incorrect instance")
         self.assertIsInstance(model2, LinearGaussianBayesianNetwork, "Incorrect instance")
 
-        model_fixed = LinearGaussianBayesianNetwork.get_random(n_nodes=7, n_edges=6, seed=42)
+        model_fixed = LinearGaussianBayesianNetwork.get_random(n_nodes=7, n_edges=6)
         self.assertEqual(len(model_fixed.edges()), 6)
         self.assertIsInstance(model_fixed, LinearGaussianBayesianNetwork, "Incorrect instance")
 
