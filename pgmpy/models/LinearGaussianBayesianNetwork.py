@@ -1154,7 +1154,14 @@ class LinearGaussianBayesianNetwork(DAG):
         <LinearGaussianCPD: P(X_3 | X_0, X_2) = N(...) at 0x...,
         <LinearGaussianCPD: P(X_4 | X_3) = N(...) at 0x...]
         """
-        dag = DAG.get_random(n_nodes=n_nodes, n_edges=n_edges, edge_prob=edge_prob, node_names=node_names, latents=latents, seed=seed)
+        dag = DAG.get_random(
+            n_nodes=n_nodes,
+            n_edges=n_edges,
+            edge_prob=edge_prob,
+            node_names=node_names,
+            latents=latents,
+            seed=seed,
+        )
         # Initialize with full DAG to preserve isolated nodes
         lgbn_model = LinearGaussianBayesianNetwork(dag)
         lgbn_model.latents = dag.latents
