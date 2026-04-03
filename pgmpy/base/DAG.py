@@ -1311,7 +1311,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
     def get_random(
         n_nodes=5,
         n_edges: int | None = None,
-        edge_prob=0.5,
+        edge_prob: float | None = None,
         node_names: list[Hashable] | None = None,
         latents=False,
         seed: int | None = None,
@@ -1319,9 +1319,9 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         """
         Returns a randomly generated DAG with `n_nodes` number of nodes.
 
-        If `n_edges` is specified, generates a DAG with exactly that many edges
-        and `edge_prob` is ignored.
+        If `n_edges` is specified, generates a DAG with exactly that many edges.
         If `n_edges` is None, edges are added randomly with probability `edge_prob`.
+        If both `n_edges` and `edge_prob` are None, uses default `edge_prob=0.5`.
 
         Parameters
         ----------
@@ -1331,9 +1331,9 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         n_edges: int or None (default: None)
             The number of edges in the randomly generated DAG.
 
-        edge_prob: float
+        edge_prob: float or None
             The probability of edge between any two nodes in the topologically
-            sorted DAG. Ignored if `n_edges` is specified.
+            sorted DAG.
 
         node_names: list (default: None)
             A list of variables names to use in the random graph.
@@ -1349,6 +1349,11 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         -------
         Random DAG: pgmpy.base.DAG
             The randomly generated DAG.
+
+        Raises
+        ------
+        ValueError
+            If both `n_edges` and `edge_prob` are specified.
 
         Examples
         --------
@@ -1372,6 +1377,14 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
 
         if len(node_names) != n_nodes:
             raise ValueError(f"Length of node_names ({len(node_names)}) must be equal to n_nodes ({n_nodes}).")
+
+        if n_edges is not None and edge_prob is not None:
+            raise ValueError("Only one of n_edges or edge_prob can be specified.")
+
+        if n_edges is None and edge_prob is None:
+            edge_prob = 0.5
+            logger.info("Using default edge_prob=0.5 since neither n_edges nor edge_prob were specified.")
+
         if n_edges is not None:
             max_edges = n_nodes * (n_nodes - 1) // 2
             if n_edges < 0 or n_edges > max_edges:

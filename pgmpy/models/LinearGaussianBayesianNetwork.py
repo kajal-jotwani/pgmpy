@@ -1092,7 +1092,7 @@ class LinearGaussianBayesianNetwork(DAG):
     def get_random(
         n_nodes: int = 5,
         n_edges: int | None = None,
-        edge_prob: float = 0.5,
+        edge_prob: float | None = None,
         node_names: list | None = None,
         latents: bool = False,
         loc: float = 0,
@@ -1112,10 +1112,10 @@ class LinearGaussianBayesianNetwork(DAG):
         n_edges: int or None (default: None)
             The number of edges in the randomly generated DAG.
 
-        edge_prob: float
+        edge_prob: float or None
             Probability of an edge (consistent with a topological order).
             The probability of edge between any two nodes in the topologically
-            sorted DAG. Ignored if `n_edges` is specified.
+            sorted DAG.
 
         node_names: list (default: None)
             A list of variables names to use in the random graph.

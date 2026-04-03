@@ -370,10 +370,8 @@ class TestDAGCreation(unittest.TestCase):
             dag = DAG.get_random(n_nodes=n_nodes, n_edges=n_edges, seed=7)
             assert_dag_props(dag, n_nodes, n_edges)
 
-        # n_edges takes priority over edge_prob.
-        dag_low = DAG.get_random(n_nodes=n_nodes, n_edges=6, edge_prob=0.0, seed=11)
-        dag_high = DAG.get_random(n_nodes=n_nodes, n_edges=6, edge_prob=1.0, seed=11)
-        self.assertEqual(set(dag_low.edges()), set(dag_high.edges()))
+        with self.assertRaisesRegex(ValueError, "Only one of n_edges or edge_prob can be specified"):
+            DAG.get_random(n_nodes=n_nodes, n_edges=6, edge_prob=0.0, seed=11)
 
         node_names = [
             "a",
@@ -415,6 +413,14 @@ class TestDAGCreation(unittest.TestCase):
 
         with self.assertRaisesRegex(ValueError, "Length of node_names"):
             DAG.get_random(n_nodes=n_nodes, n_edges=3, node_names=["a", "b", "c"])
+
+    def test_random_dag_edge_prob_default(self):
+        with self.assertLogs("pgmpy", level="INFO") as cm:
+            dag = DAG.get_random(n_nodes=5, n_edges=None, edge_prob=None, seed=13)
+
+        self.assertEqual(len(dag.nodes()), 5)
+        self.assertTrue(nx.is_directed_acyclic_graph(dag))
+        self.assertTrue(any("Using default edge_prob=0.5" in msg for msg in cm.output))
 
     def tearDown(self):
         del self.graph
