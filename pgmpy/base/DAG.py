@@ -1353,6 +1353,8 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         Raises
         ------
         ValueError
+            If `len(node_names) != n_nodes`.
+            If `n_edges` is outside `[0, n_nodes * (n_nodes - 1) // 2]`.
             If both `n_edges` and `edge_prob` are specified.
 
         Examples
