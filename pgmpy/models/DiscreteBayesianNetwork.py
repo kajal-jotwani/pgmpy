@@ -1178,7 +1178,7 @@ class DiscreteBayesianNetwork(DAG):
 
         node_names: list (default: None)
             A list of variables names to use in the random graph.
-            If None, the node names are integer values starting from 0.
+            If None, the node names are "X_0", "X_1", ..., "X_{n-1}".
 
         n_states: int or dict (default: None)
             The number of states of each variable in the form
