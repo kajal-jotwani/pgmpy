@@ -1391,19 +1391,21 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
             max_edges = n_nodes * (n_nodes - 1) // 2
             if n_edges < 0 or n_edges > max_edges:
                 raise ValueError(f"Invalid n_edges={n_edges}. For n_nodes={n_nodes}, valid range is [0, {max_edges}].")
-
+            # Apply a random node permutation to avoid label-order bias
+            perm = gen.permutation(n_nodes)
             upper_i, upper_j = np.triu_indices(n_nodes, k=1)
             chosen = gen.choice(len(upper_i), size=n_edges, replace=False)
 
             adj_mat = np.zeros((n_nodes, n_nodes), dtype=int)
-            adj_mat[upper_i[chosen], upper_j[chosen]] = 1
+            adj_mat[perm[upper_i[chosen]], perm[upper_j[chosen]]] = 1
+            adj_pd = pd.DataFrame(adj_mat, columns=node_names, index=node_names)
 
         else:
             # Step 1: Generate a matrix of 0 and 1. Prob of choosing 1 = edge_prob
             adj_mat = gen.choice([0, 1], size=(n_nodes, n_nodes), p=[1 - edge_prob, edge_prob])
+            # Step 2: Use the upper triangular part of the matrix as adjacency.
+            adj_pd = pd.DataFrame(np.triu(adj_mat, k=1), columns=node_names, index=node_names)
 
-        # Step 2: Use the upper triangular part of the matrix as adjacency.
-        adj_pd = pd.DataFrame(np.triu(adj_mat, k=1), columns=node_names, index=node_names)
         nx_dag = nx.from_pandas_adjacency(adj_pd, create_using=nx.DiGraph)
         dag = DAG(nx_dag)
 

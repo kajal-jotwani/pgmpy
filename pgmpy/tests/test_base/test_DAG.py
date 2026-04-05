@@ -410,6 +410,11 @@ class TestDAGCreation(unittest.TestCase):
         dag_b = DAG.get_random(n_nodes=5, n_edges=4, seed=42)
         self.assertEqual(set(dag_a.edges()), set(dag_b.edges()))
 
+        node_names = [f"X_{i}" for i in range(6)]
+        dag = DAG.get_random(n_nodes=6, n_edges=15, node_names=node_names, seed=0)
+        node_order = {node: idx for idx, node in enumerate(node_names)}
+        self.assertTrue(any(node_order[u] > node_order[v] for u, v in dag.edges()))
+
     def test_random_dag_fixed_n_edges_invalid(self):
         n_nodes = 5
         max_edges = n_nodes * (n_nodes - 1) // 2
