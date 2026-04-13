@@ -2,7 +2,9 @@ import numpy as np
 import pandas as pd
 
 from pgmpy.base import DAG, PDAG
-from pgmpy.metrics import SHD, _BaseSupervisedMetric, _BaseUnsupervisedMetric
+
+from ._base import _BaseSupervisedMetric, _BaseUnsupervisedMetric
+from .shd import SHD
 
 
 class NegativeControl(_BaseUnsupervisedMetric):
@@ -34,6 +36,10 @@ class NegativeControl(_BaseUnsupervisedMetric):
         base_metric : _BaseSupervisedMetric, optional
             Metric f(G_true, G_est). Defaults to ``SHD()``.
 
+        metric_key : str, optional
+            Key to extract from dict-valued ``base_metric`` outputs. Required
+            if the base metric returns multiple scores.
+
         n_simulations : int, default 1000
             Number of negative control random graphs (b in the paper).
 
@@ -61,6 +67,7 @@ class NegativeControl(_BaseUnsupervisedMetric):
         >>> from pgmpy.estimators import PC
         >>> nc = NegativeControl(
         ...     causal_discovery_algo=PC,
+        ...     estimate_kwargs={"return_type": "dag"},
         ...     base_metric=SHD(),
         ...     n_simulations=1000,
         ...     seed=42,
@@ -78,7 +85,7 @@ class NegativeControl(_BaseUnsupervisedMetric):
 
     _tags = {
         "name": "negative_control",
-        "requires_true_graph": False,
+        "requires_true_graph": True,
         "requires_data": True,
         "lower_is_better": False,  # small p_value is GOOD
         "supported_graph_types": (DAG, PDAG),
@@ -91,6 +98,7 @@ class NegativeControl(_BaseUnsupervisedMetric):
         algo_kwargs: dict | None = None,
         estimate_kwargs: dict | None = None,
         base_metric: _BaseSupervisedMetric | None = None,
+        metric_key: str | None = None,
         n_simulations: int = 1000,
         seed: int | None = None,
         show_progress: bool = True,
@@ -99,6 +107,7 @@ class NegativeControl(_BaseUnsupervisedMetric):
         self.algo_kwargs = algo_kwargs or {}
         self.estimate_kwargs = estimate_kwargs or {}
         self.base_metric = base_metric if base_metric is not None else SHD()
+        self.metric_key = metric_key
 
         self.n_simulations = n_simulations
         self.seed = seed
@@ -112,7 +121,15 @@ class NegativeControl(_BaseUnsupervisedMetric):
     def _to_scalar(self, score) -> float:
         """Extract a float from a metric return value (float or dict)."""
         if isinstance(score, dict):
-            return float(next(iter(score.values())))
+            if self.metric_key is None:
+                raise ValueError("metric_key must be set when base_metric returns a dictionary.")
+
+            if self.metric_key not in score:
+                raise ValueError(
+                    f"metric_key='{self.metric_key}' was not found in the metric output keys: {tuple(score)}"
+                )
+
+            return float(score[self.metric_key])
         return float(score)
 
     def _evaluate(self, X: pd.DataFrame, causal_graph) -> dict:
