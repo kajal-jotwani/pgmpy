@@ -3,6 +3,7 @@ from __future__ import annotations
 import itertools
 from collections.abc import Hashable, Iterable, Sequence
 from os import PathLike
+from random import shuffle
 
 import networkx as nx
 import numpy as np
@@ -1387,6 +1388,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
             edge_prob = 0.5
             logger.info("Using default edge_prob=0.5 since neither n_edges nor edge_prob were specified.")
 
+        shuffle(node_names)
         if n_edges is not None:
             max_edges = n_nodes * (n_nodes - 1) // 2
             if n_edges < 0 or n_edges > max_edges:
