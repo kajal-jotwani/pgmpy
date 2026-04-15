@@ -1091,7 +1091,8 @@ class LinearGaussianBayesianNetwork(DAG):
     @staticmethod
     def get_random(
         n_nodes: int = 5,
-        edge_prob: float = 0.5,
+        n_edges: int | None = None,
+        edge_prob: float | None = None,
         node_names: list | None = None,
         latents: bool = False,
         loc: float = 0,
@@ -1108,13 +1109,17 @@ class LinearGaussianBayesianNetwork(DAG):
             Number of nodes.
             The number of nodes in the randomly generated DAG.
 
+        n_edges: int or None (default: None)
+            The number of edges in the randomly generated DAG.
+
+        edge_prob: float or None
             Probability of an edge (consistent with a topological order).
             The probability of edge between any two nodes in the topologically
             sorted DAG.
 
         node_names: list (default: None)
             A list of variables names to use in the random graph.
-            If None, the node names are integer values starting from 0.
+            If None, the node names are "X_0", "X_1", ..., "X_{n-1}".
 
         latents: bool (default: False)
         loc: float
@@ -1149,7 +1154,14 @@ class LinearGaussianBayesianNetwork(DAG):
         <LinearGaussianCPD: P(X_3 | X_0, X_2) = N(...) at 0x...,
         <LinearGaussianCPD: P(X_4 | X_3) = N(...) at 0x...]
         """
-        dag = DAG.get_random(n_nodes=n_nodes, edge_prob=edge_prob, node_names=node_names, latents=latents, seed=seed)
+        dag = DAG.get_random(
+            n_nodes=n_nodes,
+            n_edges=n_edges,
+            edge_prob=edge_prob,
+            node_names=node_names,
+            latents=latents,
+            seed=seed,
+        )
         # Initialize with full DAG to preserve isolated nodes
         lgbn_model = LinearGaussianBayesianNetwork(dag)
         lgbn_model.latents = dag.latents
