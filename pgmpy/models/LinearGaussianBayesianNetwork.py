@@ -1146,13 +1146,13 @@ class LinearGaussianBayesianNetwork(DAG):
         >>> sorted(model.nodes())
         ['X_0', 'X_1', 'X_2', 'X_3', 'X_4']
         >>> sorted(model.edges())
-        [('X_0', 'X_2'), ('X_0', 'X_3'), ('X_1', 'X_2'), ('X_2', 'X_3'), ('X_3', 'X_4')]
+        [('X_2', 'X_0'), ('X_3', 'X_0'), ('X_4', 'X_0'), ('X_4', 'X_1'), ('X_4', 'X_2')]
         >>> sorted(model.cpds, key=lambda cpd: cpd.variable) # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
-        [<LinearGaussianCPD: P(X_0) = N(...; ...) at 0x...,
-        <LinearGaussianCPD: P(X_1) = N(...; ...) at 0x...,
-        <LinearGaussianCPD: P(X_2 | X_0, X_1) = N(...) at 0x...,
-        <LinearGaussianCPD: P(X_3 | X_0, X_2) = N(...) at 0x...,
-        <LinearGaussianCPD: P(X_4 | X_3) = N(...) at 0x...]
+        [<LinearGaussianCPD: P(X_0 | X_4, X_2, X_3) = N(...) at 0x...,
+        <LinearGaussianCPD: P(X_1 | X_4) = N(...) at 0x...,
+        <LinearGaussianCPD: P(X_2 | X_4) = N(...) at 0x...,
+        <LinearGaussianCPD: P(X_3) = N(...; ...) at 0x...,
+        <LinearGaussianCPD: P(X_4) = N(...; ...) at 0x...]
         """
         dag = DAG.get_random(
             n_nodes=n_nodes,

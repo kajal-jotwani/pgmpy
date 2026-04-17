@@ -360,9 +360,11 @@ class TestDAGCreation(unittest.TestCase):
                 "aaaaaaa",
                 "aaaaaaaa",
             ]
+            original_node_names = list(node_names)
             dag = DAG.get_random(n_nodes=n_nodes, edge_prob=edge_prob, node_names=node_names)
             self.assertEqual(len(dag.nodes()), n_nodes)
             self.assertEqual(sorted(dag.nodes()), node_names)
+            self.assertEqual(node_names, original_node_names)
             self.assertTrue(nx.is_directed_acyclic_graph(dag))
             self.assertTrue(len(dag.latents) == 0)
 
@@ -392,6 +394,7 @@ class TestDAGCreation(unittest.TestCase):
             "aaaaaaa",
             "aaaaaaaa",
         ]
+        original_node_names = list(node_names)
         dag = DAG.get_random(
             n_nodes=n_nodes,
             n_edges=6,
@@ -399,6 +402,7 @@ class TestDAGCreation(unittest.TestCase):
             seed=11,
         )
         self.assertEqual(sorted(dag.nodes()), node_names)
+        self.assertEqual(node_names, original_node_names)
         assert_dag_props(dag, n_nodes, 6)
 
         dag = DAG.get_random(n_nodes=6, n_edges=4, latents=True, seed=3)

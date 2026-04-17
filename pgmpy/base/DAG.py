@@ -1364,9 +1364,11 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         >>> sorted(random_dag.nodes())
         ['X_0', 'X_1', 'X_2', 'X_3', 'X_4', 'X_5', 'X_6', 'X_7', 'X_8', 'X_9']
         >>> sorted(random_dag.edges())  # doctest: +NORMALIZE_WHITESPACE
-        [('X_0', 'X_2'), ('X_0', 'X_5'), ('X_0', 'X_6'), ('X_0', 'X_7'),
-         ('X_1', 'X_3'), ('X_1', 'X_8'), ('X_2', 'X_3'), ('X_2', 'X_4'),
-         ('X_4', 'X_5'), ('X_7', 'X_9')]
+        [('X_0', 'X_2'), ('X_0', 'X_3'), ('X_2', 'X_9'), ('X_3', 'X_1'),
+         ('X_3', 'X_4'), ('X_3', 'X_8'), ('X_5', 'X_2'), ('X_5', 'X_6'),
+         ('X_5', 'X_9'), ('X_6', 'X_0'), ('X_6', 'X_1'), ('X_6', 'X_3'),
+         ('X_6', 'X_4'), ('X_6', 'X_9'), ('X_7', 'X_1'), ('X_7', 'X_2'),
+         ('X_7', 'X_4'), ('X_7', 'X_8')]
 
         >>> dag = DAG.get_random(n_nodes=5, n_edges=6, seed=42)
         >>> dag.number_of_edges()
@@ -1387,7 +1389,8 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
             edge_prob = 0.5
             logger.info("Using default edge_prob=0.5 since neither n_edges nor edge_prob were specified.")
 
-        gen.shuffle(node_names)
+        shuffled_names = list(node_names)
+        gen.shuffle(shuffled_names)
         if n_edges is not None:
             max_edges = n_nodes * (n_nodes - 1) // 2
             if n_edges < 0 or n_edges > max_edges:
@@ -1399,13 +1402,13 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
 
             adj_mat = np.zeros((n_nodes, n_nodes), dtype=int)
             adj_mat[perm[upper_i[chosen]], perm[upper_j[chosen]]] = 1
-            adj_pd = pd.DataFrame(adj_mat, columns=node_names, index=node_names)
+            adj_pd = pd.DataFrame(adj_mat, columns=shuffled_names, index=shuffled_names)
 
         else:
             # Step 1: Generate a matrix of 0 and 1. Prob of choosing 1 = edge_prob
             adj_mat = gen.choice([0, 1], size=(n_nodes, n_nodes), p=[1 - edge_prob, edge_prob])
             # Step 2: Use the upper triangular part of the matrix as adjacency.
-            adj_pd = pd.DataFrame(np.triu(adj_mat, k=1), columns=node_names, index=node_names)
+            adj_pd = pd.DataFrame(np.triu(adj_mat, k=1), columns=shuffled_names, index=shuffled_names)
 
         nx_dag = nx.from_pandas_adjacency(adj_pd, create_using=nx.DiGraph)
         dag = DAG(nx_dag)
