@@ -90,10 +90,10 @@ class Prob(_TreeNode):
     'P(Y)'
 
     >>> Prob(frozenset({"Y"}), cond=frozenset({"X"})).to_latex()
-    'P(Y \\mid X)'
+    'P(Y \\\\mid X)'
 
     >>> Prob(frozenset({"Y"}), do=frozenset({"X"})).to_latex()
-    'P(Y \\mid do(X))'
+    'P(Y \\\\mid do(X))'
     """
 
     node_type = "prob"
@@ -131,7 +131,7 @@ class Prob(_TreeNode):
         Examples
         --------
         >>> Prob(frozenset({"Y"}), do=frozenset({"X"}), cond=frozenset({"Z"})).to_latex()
-        'P(Y \\mid do(X), Z)'
+        'P(Y \\\\mid do(X), Z)'
         """
         variables_str = self._vars_to_latex(self.variables)
 
@@ -192,7 +192,7 @@ class Marginal(_TreeNode):
     ...     sumset=frozenset({"X"}),
     ... )
     >>> m.to_latex()
-    '\\sum_{X} P(Y \\mid X)'
+    '\\\\sum_{X} P(Y \\\\mid X)'
     """
 
     node_type = "sum"
@@ -250,7 +250,7 @@ class Product(_TreeNode):
     ...     Prob(frozenset({"Y"}), cond=frozenset({"X"})),
     ...     Prob(frozenset({"X"})),
     ... ]).to_latex()
-    'P(Y \\mid X) P(X)'
+    'P(Y \\\\mid X) P(X)'
     """
 
     node_type = "product"
@@ -312,7 +312,7 @@ class Division(_TreeNode):
     ...     Prob(frozenset({"Y"}), do=frozenset({"X"})),
     ...     Prob(frozenset({"Z"}), do=frozenset({"X"})),
     ... ).to_latex()
-    '\\frac{P(Y \\mid do(X))}{P(Z \\mid do(X))}'
+    '\\\\frac{P(Y \\\\mid do(X))}{P(Z \\\\mid do(X))}'
     """
 
     node_type = "division"
@@ -390,7 +390,7 @@ class ProbabilityExpressionTree:
     ...     sumset=frozenset({"Z"}),
     ... ))
     >>> expr.to_latex()
-    '\\sum_{Z} P(Z \\mid X) \\left[ \\sum_{X} P(Y \\mid X, Z) P(X) \\right]'
+    '\\\\sum_{Z} P(Z \\\\mid X) \\\\left[ \\\\sum_{X} P(Y \\\\mid X, Z) P(X) \\\\right]'
     >>> expr.root.node_type
     'sum'
     >>> expr.root.children[0].node_type
@@ -425,7 +425,7 @@ class ProbabilityExpressionTree:
         ...     root=Prob(frozenset({"Y"}), cond=frozenset({"X"}))
         ... )
         >>> expr.to_latex()
-        'P(Y \\mid X)'
+        'P(Y \\\\mid X)'
         """
         return self.root.to_latex()
 
