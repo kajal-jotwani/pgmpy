@@ -18,6 +18,11 @@ class _TreeNode:
     # Each subclass sets self.children in __init__.
     children = []
 
+    @staticmethod
+    def _vars_to_latex(var_set):
+        """Sort and join variable names for deterministic LaTeX output."""
+        return ", ".join(sorted(var_set))
+
     def to_latex(self):
         """Return a LaTeX string representation of this node.
 
@@ -105,11 +110,6 @@ class ProbabilityNode(_TreeNode):
         self.cond = frozenset(cond)
         self.sumset = frozenset(sumset)
         self.children = []
-
-    @staticmethod
-    def _vars_to_latex(var_set):
-        """Sort and join variable names for deterministic LaTeX output."""
-        return ", ".join(sorted(var_set))
 
     def to_latex(self):
         """
@@ -207,7 +207,7 @@ class MarginalNode(_TreeNode):
         -------
         str
         """
-        sumset_str = ", ".join(sorted(self.sumset))
+        sumset_str = self._vars_to_latex(self.sumset)
         child_latex = self.children[0].to_latex()
         return r"\sum_{" + sumset_str + "} " + child_latex
 
