@@ -7,7 +7,7 @@ class _TreeNode:
     (str), ``children`` (list of _TreeNode), ``to_latex()`` (str), and
     ``__repr__()`` (str).
 
-    Concrete subclasses: Prob, Marginal, Product, Division.
+    Concrete subclasses: ProbabilityNode, MarginalNode, ProductNode, DivisionNode.
 
     Do not instantiate directly.
     """
@@ -37,7 +37,7 @@ class _TreeNode:
         raise NotImplementedError
 
 
-class Prob(_TreeNode):
+class ProbabilityNode(_TreeNode):
     """
     Leaf node of the expression tree.
 
@@ -77,17 +77,17 @@ class Prob(_TreeNode):
         Always ``"prob"``.
 
     children : list
-        Always ``[]``. ``Prob`` is always a leaf node.
+        Always ``[]``. ``ProbabilityNode`` is always a leaf node.
 
     Examples
     --------
-    >>> Prob(frozenset({"Y"})).to_latex()
+    >>> ProbabilityNode(frozenset({"Y"})).to_latex()
     'P(Y)'
 
-    >>> Prob(frozenset({"Y"}), cond=frozenset({"X"})).to_latex()
+    >>> ProbabilityNode(frozenset({"Y"}), cond=frozenset({"X"})).to_latex()
     'P(Y \\\\mid X)'
 
-    >>> Prob(frozenset({"Y"}), do=frozenset({"X"})).to_latex()
+    >>> ProbabilityNode(frozenset({"Y"}), do=frozenset({"X"})).to_latex()
     'P(Y \\\\mid do(X))'
     """
 
@@ -125,7 +125,7 @@ class Prob(_TreeNode):
 
         Examples
         --------
-        >>> Prob(frozenset({"Y"}), do=frozenset({"X"}), cond=frozenset({"Z"})).to_latex()
+        >>> ProbabilityNode(frozenset({"Y"}), do=frozenset({"X"}), cond=frozenset({"Z"})).to_latex()
         'P(Y \\\\mid do(X), Z)'
         """
         variables_str = self._vars_to_latex(self.variables)
@@ -155,10 +155,10 @@ class Prob(_TreeNode):
             parts.append(f"cond={set(self.cond)!r}")
         if self.sumset:
             parts.append(f"sumset={set(self.sumset)!r}")
-        return "Prob(" + ", ".join(parts) + ")"
+        return "ProbabilityNode(" + ", ".join(parts) + ")"
 
 
-class Marginal(_TreeNode):
+class MarginalNode(_TreeNode):
     """
     Internal node representing a marginalisation over a sub-expression::
 
@@ -166,7 +166,7 @@ class Marginal(_TreeNode):
 
     Parameters
     ----------
-    child : Prob or Marginal or Product or Division
+    child : ProbabilityNode or MarginalNode or ProductNode or DivisionNode
         The expression being summed over. Stored as ``children[0]``.
 
     sumset : frozenset of str
@@ -182,8 +182,8 @@ class Marginal(_TreeNode):
 
     Examples
     --------
-    >>> m = Marginal(
-    ...     Prob(frozenset({"Y"}), cond=frozenset({"X"})),
+    >>> m = MarginalNode(
+    ...     ProbabilityNode(frozenset({"Y"}), cond=frozenset({"X"})),
     ...     sumset=frozenset({"X"}),
     ... )
     >>> m.to_latex()
@@ -212,10 +212,10 @@ class Marginal(_TreeNode):
         return r"\sum_{" + sumset_str + "} " + child_latex
 
     def __repr__(self):
-        return f"Marginal(child={self.children[0]!r}, sumset={set(self.sumset)!r})"
+        return f"MarginalNode(child={self.children[0]!r}, sumset={set(self.sumset)!r})"
 
 
-class Product(_TreeNode):
+class ProductNode(_TreeNode):
     """
     Internal node representing a product of two or more sub-expressions::
 
@@ -223,7 +223,7 @@ class Product(_TreeNode):
 
     Parameters
     ----------
-    factors : list of (Prob or Marginal or Product or Division)
+    factors : list of (ProbabilityNode or MarginalNode or ProductNode or DivisionNode)
         The expressions being multiplied. Must have at least two elements.
 
     Raises
@@ -241,9 +241,9 @@ class Product(_TreeNode):
 
     Examples
     --------
-    >>> Product([
-    ...     Prob(frozenset({"Y"}), cond=frozenset({"X"})),
-    ...     Prob(frozenset({"X"})),
+    >>> ProductNode([
+    ...     ProbabilityNode(frozenset({"Y"}), cond=frozenset({"X"})),
+    ...     ProbabilityNode(frozenset({"X"})),
     ... ]).to_latex()
     'P(Y \\\\mid X) P(X)'
     """
@@ -259,7 +259,7 @@ class Product(_TreeNode):
         r"""
         Return LaTeX for the product of all children, space-separated.
 
-        Composite children (Marginal, Product, Division) are wrapped in
+        Composite children (MarginalNode, ProductNode, DivisionNode) are wrapped in
         ``\left[ ... \right]`` to make nested grouping unambiguous.
 
         Returns
@@ -269,17 +269,17 @@ class Product(_TreeNode):
         parts = []
         for child in self.children:
             child_latex = child.to_latex()
-            if isinstance(child, (Marginal, Product, Division)):
+            if isinstance(child, (MarginalNode, ProductNode, DivisionNode)):
                 parts.append(r"\left[ " + child_latex + r" \right]")
             else:
                 parts.append(child_latex)
         return " ".join(parts)
 
     def __repr__(self):
-        return "Product([" + ", ".join(repr(c) for c in self.children) + "])"
+        return "ProductNode([" + ", ".join(repr(c) for c in self.children) + "])"
 
 
-class Division(_TreeNode):
+class DivisionNode(_TreeNode):
     """
     Internal node representing a ratio of two sub-expressions::
 
@@ -287,10 +287,10 @@ class Division(_TreeNode):
 
     Parameters
     ----------
-    numerator : Prob or Marginal or Product or Division
+    numerator : ProbabilityNode or MarginalNode or ProductNode or DivisionNode
         The numerator expression. Stored as ``children[0]``.
 
-    denominator : Prob or Marginal or Product or Division
+    denominator : ProbabilityNode or MarginalNode or ProductNode or DivisionNode
         The denominator expression. Stored as ``children[1]``.
 
     Attributes
@@ -303,9 +303,9 @@ class Division(_TreeNode):
 
     Examples
     --------
-    >>> Division(
-    ...     Prob(frozenset({"Y"}), do=frozenset({"X"})),
-    ...     Prob(frozenset({"Z"}), do=frozenset({"X"})),
+    >>> DivisionNode(
+    ...     ProbabilityNode(frozenset({"Y"}), do=frozenset({"X"})),
+    ...     ProbabilityNode(frozenset({"Z"}), do=frozenset({"X"})),
     ... ).to_latex()
     '\\\\frac{P(Y \\\\mid do(X))}{P(Z \\\\mid do(X))}'
     """
@@ -328,7 +328,7 @@ class Division(_TreeNode):
         return r"\frac{" + num_latex + "}{" + den_latex + "}"
 
     def __repr__(self):
-        return f"Division(numerator={self.children[0]!r}, denominator={self.children[1]!r})"
+        return f"DivisionNode(numerator={self.children[0]!r}, denominator={self.children[1]!r})"
 
 
 class ProbabilityExpressionTree:
@@ -340,13 +340,14 @@ class ProbabilityExpressionTree:
     returned by causal identification routines and is not itself a tree
     node.
 
-    The expression tree is composed of `Prob`, `Marginal`, `Product`, and
-    `Division` nodes (all subclasses of `_TreeNode`). Inspect or traverse the
+    The expression tree is composed of `ProbabilityNode`, `MarginalNode`,
+    `ProductNode`, and `DivisionNode` nodes (all subclasses of `_TreeNode`).
+    Inspect or traverse the
     tree via the `root` attribute and the `children` lists on nodes.
 
     Parameters
     ----------
-    root : Prob | Marginal | Product | Division
+    root : ProbabilityNode | MarginalNode | ProductNode | DivisionNode
         Root node of the expression tree. Must be an instance of `_TreeNode`.
 
     Raises
@@ -356,7 +357,7 @@ class ProbabilityExpressionTree:
 
     Attributes
     ----------
-    root : Prob | Marginal | Product | Division
+    root : ProbabilityNode | MarginalNode | ProductNode | DivisionNode
         The expression tree root. Sub-nodes are accessible via
         `root.children`.
 
@@ -364,7 +365,7 @@ class ProbabilityExpressionTree:
     -----
     The `to_latex()` method delegates to `self.root.to_latex()` and
     returns a complete LaTeX representation suitable for math
-    environments. Rendering proceeds bottom-up: leaf `Prob` nodes render
+    environments. Rendering proceeds bottom-up: leaf `ProbabilityNode` nodes render
     themselves and internal nodes combine their children's strings using
     the appropriate notation (e.g. `\\sum`, `\frac`, brackets).
 
@@ -373,14 +374,14 @@ class ProbabilityExpressionTree:
     Build the bow-arc formula
     ``\\sum_Z [ P(Z|X) \\cdot \\sum_{X'} [ P(Y|Z,X') P(X') ] ]``:
 
-    >>> inner = Product([
-    ...     Prob(frozenset({"Y"}), cond=frozenset({"Z", "X"})),
-    ...     Prob(frozenset({"X"})),
+    >>> inner = ProductNode([
+    ...     ProbabilityNode(frozenset({"Y"}), cond=frozenset({"Z", "X"})),
+    ...     ProbabilityNode(frozenset({"X"})),
     ... ])
-    >>> expr = ProbabilityExpressionTree(root=Marginal(
-    ...     Product([
-    ...         Prob(frozenset({"Z"}), cond=frozenset({"X"})),
-    ...         Marginal(inner, sumset=frozenset({"X"})),
+    >>> expr = ProbabilityExpressionTree(root=MarginalNode(
+    ...     ProductNode([
+    ...         ProbabilityNode(frozenset({"Z"}), cond=frozenset({"X"})),
+    ...         MarginalNode(inner, sumset=frozenset({"X"})),
     ...     ]),
     ...     sumset=frozenset({"Z"}),
     ... ))
@@ -395,8 +396,8 @@ class ProbabilityExpressionTree:
     def __init__(self, root):
         if not isinstance(root, _TreeNode):
             raise TypeError(
-                f"root must be a _TreeNode instance (one of Prob, Marginal, "
-                f"Product, Division); got {type(root).__name__}."
+                f"root must be a _TreeNode instance (one of ProbabilityNode, "
+                f"MarginalNode, ProductNode, DivisionNode); got {type(root).__name__}."
             )
         self.root = root
 
@@ -417,7 +418,7 @@ class ProbabilityExpressionTree:
         Examples
         --------
         >>> expr = ProbabilityExpressionTree(
-        ...     root=Prob(frozenset({"Y"}), cond=frozenset({"X"}))
+        ...     root=ProbabilityNode(frozenset({"Y"}), cond=frozenset({"X"}))
         ... )
         >>> expr.to_latex()
         'P(Y \\\\mid X)'

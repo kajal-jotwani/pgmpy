@@ -1,28 +1,28 @@
 import pytest
 
 from pgmpy.identification.probability_expression import (
-    Division,
-    Marginal,
-    Prob,
+    DivisionNode,
+    MarginalNode,
     ProbabilityExpressionTree,
-    Product,
+    ProbabilityNode,
+    ProductNode,
     _TreeNode,
 )
 
 
 @pytest.fixture
 def prob_y():
-    return Prob(frozenset({"Y"}))
+    return ProbabilityNode(frozenset({"Y"}))
 
 
 @pytest.fixture
 def prob_x():
-    return Prob(frozenset({"X"}))
+    return ProbabilityNode(frozenset({"X"}))
 
 
 @pytest.fixture
 def prob_y_cond_x():
-    return Prob(frozenset({"Y"}), cond=frozenset({"X"}))
+    return ProbabilityNode(frozenset({"Y"}), cond=frozenset({"X"}))
 
 
 @pytest.fixture
@@ -31,20 +31,20 @@ def frontdoor_expr():
     ProbabilityExpressionTree for the frontdoor formula:
         sum_M [ P(M|X) * sum_{X'} [ P(Y|M,X') P(X') ] ]
     """
-    inner_product = Product(
+    inner_product = ProductNode(
         [
-            Prob(frozenset({"Y"}), cond=frozenset({"M", "X"})),
-            Prob(frozenset({"X"})),
+            ProbabilityNode(frozenset({"Y"}), cond=frozenset({"M", "X"})),
+            ProbabilityNode(frozenset({"X"})),
         ]
     )
-    inner_sum = Marginal(inner_product, sumset=frozenset({"X"}))
-    outer_product = Product(
+    inner_sum = MarginalNode(inner_product, sumset=frozenset({"X"}))
+    outer_product = ProductNode(
         [
-            Prob(frozenset({"M"}), cond=frozenset({"X"})),
+            ProbabilityNode(frozenset({"M"}), cond=frozenset({"X"})),
             inner_sum,
         ]
     )
-    return ProbabilityExpressionTree(root=Marginal(outer_product, sumset=frozenset({"M"})))
+    return ProbabilityExpressionTree(root=MarginalNode(outer_product, sumset=frozenset({"M"})))
 
 
 @pytest.fixture
@@ -53,20 +53,20 @@ def bowarc_expr():
     ProbabilityExpressionTree for the bow-arc formula:
         sum_Z [ P(Z|X) * sum_{X'} [ P(Y|Z,X') P(X') ] ]
     """
-    inner_product = Product(
+    inner_product = ProductNode(
         [
-            Prob(frozenset({"Y"}), cond=frozenset({"Z", "X"})),
-            Prob(frozenset({"X"})),
+            ProbabilityNode(frozenset({"Y"}), cond=frozenset({"Z", "X"})),
+            ProbabilityNode(frozenset({"X"})),
         ]
     )
-    inner_sum = Marginal(inner_product, sumset=frozenset({"X"}))
-    outer_product = Product(
+    inner_sum = MarginalNode(inner_product, sumset=frozenset({"X"}))
+    outer_product = ProductNode(
         [
-            Prob(frozenset({"Z"}), cond=frozenset({"X"})),
+            ProbabilityNode(frozenset({"Z"}), cond=frozenset({"X"})),
             inner_sum,
         ]
     )
-    return ProbabilityExpressionTree(root=Marginal(outer_product, sumset=frozenset({"Z"})))
+    return ProbabilityExpressionTree(root=MarginalNode(outer_product, sumset=frozenset({"Z"})))
 
 
 def collect_node_types(node):
@@ -88,14 +88,14 @@ def find_leaves(node):
 class TestTreeNodeAbstract:
     def test_concrete_subclasses_are_tree_nodes(self, prob_y, prob_x):
         assert isinstance(prob_y, _TreeNode)
-        assert isinstance(Marginal(prob_y, sumset=frozenset({"Y"})), _TreeNode)
-        assert isinstance(Product([prob_y, prob_x]), _TreeNode)
-        assert isinstance(Division(prob_y, prob_x), _TreeNode)
+        assert isinstance(MarginalNode(prob_y, sumset=frozenset({"Y"})), _TreeNode)
+        assert isinstance(ProductNode([prob_y, prob_x]), _TreeNode)
+        assert isinstance(DivisionNode(prob_y, prob_x), _TreeNode)
 
 
 class TestProbInit:
     def test_init(self):
-        p = Prob(
+        p = ProbabilityNode(
             frozenset({"Y"}),
             do=frozenset({"X"}),
             cond=frozenset({"Z"}),
@@ -108,12 +108,12 @@ class TestProbInit:
         assert p.cond == frozenset({"Z"})
         assert p.sumset == frozenset({"W"})
 
-        p_defaults = Prob(frozenset({"Y"}))
+        p_defaults = ProbabilityNode(frozenset({"Y"}))
         assert p_defaults.do == frozenset()
         assert p_defaults.cond == frozenset()
         assert p_defaults.sumset == frozenset()
 
-        p_coerced = Prob(["Y"], do=["X"], cond=["Z"], sumset=["W"])
+        p_coerced = ProbabilityNode(["Y"], do=["X"], cond=["Z"], sumset=["W"])
         assert isinstance(p_coerced.variables, frozenset)
         assert isinstance(p_coerced.do, frozenset)
         assert isinstance(p_coerced.cond, frozenset)
@@ -122,21 +122,24 @@ class TestProbInit:
 
 class TestProbToLatex:
     def test_to_latex(self):
-        assert Prob(frozenset({"Y"})).to_latex() == "P(Y)"
-        assert Prob(frozenset({"Y"}), cond=frozenset({"X"})).to_latex() == r"P(Y \mid X)"
-        assert Prob(frozenset({"Y"}), do=frozenset({"X"})).to_latex() == r"P(Y \mid do(X))"
-        assert Prob(frozenset({"Y"}), do=frozenset({"X"}), cond=frozenset({"Z"})).to_latex() == r"P(Y \mid do(X), Z)"
-        assert Prob(frozenset({"Z", "Y"})).to_latex() == "P(Y, Z)"
-        assert Prob(frozenset({"Y"}), cond=frozenset({"Z", "X"})).to_latex() == r"P(Y \mid X, Z)"
-        latex = Prob(frozenset({"Y", "Z"}), sumset=frozenset({"Z"})).to_latex()
+        assert ProbabilityNode(frozenset({"Y"})).to_latex() == "P(Y)"
+        assert ProbabilityNode(frozenset({"Y"}), cond=frozenset({"X"})).to_latex() == r"P(Y \mid X)"
+        assert ProbabilityNode(frozenset({"Y"}), do=frozenset({"X"})).to_latex() == r"P(Y \mid do(X))"
+        assert (
+            ProbabilityNode(frozenset({"Y"}), do=frozenset({"X"}), cond=frozenset({"Z"})).to_latex()
+            == r"P(Y \mid do(X), Z)"
+        )
+        assert ProbabilityNode(frozenset({"Z", "Y"})).to_latex() == "P(Y, Z)"
+        assert ProbabilityNode(frozenset({"Y"}), cond=frozenset({"Z", "X"})).to_latex() == r"P(Y \mid X, Z)"
+        latex = ProbabilityNode(frozenset({"Y", "Z"}), sumset=frozenset({"Z"})).to_latex()
         assert latex == r"\sum_{Z} P(Y, Z)"
-        latex_multi = Prob(frozenset({"X", "Y", "Z"}), sumset=frozenset({"X", "Z"})).to_latex()
+        latex_multi = ProbabilityNode(frozenset({"X", "Y", "Z"}), sumset=frozenset({"X", "Z"})).to_latex()
         assert latex_multi.startswith(r"\sum_{X, Z}")
 
 
 class TestMarginalInit:
     def test_init(self, prob_y):
-        m = Marginal(prob_y, sumset=frozenset({"Y"}))
+        m = MarginalNode(prob_y, sumset=frozenset({"Y"}))
         assert m.node_type == "sum"
         assert len(m.children) == 1
         assert m.children[0] is prob_y
@@ -146,48 +149,48 @@ class TestMarginalInit:
 
 class TestMarginalToLatex:
     def test_to_latex(self):
-        inner = Prob(frozenset({"Y"}), cond=frozenset({"X"}))
-        assert Marginal(inner, sumset=frozenset({"X"})).to_latex() == r"\sum_{X} P(Y \mid X)"
+        inner = ProbabilityNode(frozenset({"Y"}), cond=frozenset({"X"}))
+        assert MarginalNode(inner, sumset=frozenset({"X"})).to_latex() == r"\sum_{X} P(Y \mid X)"
 
-        inner2 = Prob(frozenset({"Y"}))
-        latex = Marginal(inner2, sumset=frozenset({"Z", "X"})).to_latex()
+        inner2 = ProbabilityNode(frozenset({"Y"}))
+        latex = MarginalNode(inner2, sumset=frozenset({"Z", "X"})).to_latex()
         assert latex.startswith(r"\sum_{X, Z}")
 
 
 class TestProductInit:
     def test_init(self, prob_y, prob_x, prob_y_cond_x):
-        prod = Product([prob_y, prob_x])
+        prod = ProductNode([prob_y, prob_x])
         assert prod.node_type == "product"
         assert len(prod.children) == 2
         assert prod.children[0] is prob_y
         assert prod.children[1] is prob_x
 
-        assert len(Product([prob_y, prob_x, prob_y_cond_x]).children) == 3
+        assert len(ProductNode([prob_y, prob_x, prob_y_cond_x]).children) == 3
 
         with pytest.raises(ValueError, match="at least two factors"):
-            Product([prob_y])
+            ProductNode([prob_y])
 
         with pytest.raises(ValueError, match="at least two factors"):
-            Product([])
+            ProductNode([])
 
 
 class TestProductToLatex:
     def test_to_latex(self, prob_y, prob_x):
-        p1 = Prob(frozenset({"Y"}), cond=frozenset({"X"}))
-        p2 = Prob(frozenset({"X"}))
-        assert Product([p1, p2]).to_latex() == r"P(Y \mid X) P(X)"
+        p1 = ProbabilityNode(frozenset({"Y"}), cond=frozenset({"X"}))
+        p2 = ProbabilityNode(frozenset({"X"}))
+        assert ProductNode([p1, p2]).to_latex() == r"P(Y \mid X) P(X)"
 
-        assert r"\left[" not in Product([prob_y, prob_x]).to_latex()
+        assert r"\left[" not in ProductNode([prob_y, prob_x]).to_latex()
 
-        inner = Marginal(Prob(frozenset({"Y"})), sumset=frozenset({"Y"}))
-        latex = Product([Prob(frozenset({"X"})), inner]).to_latex()
+        inner = MarginalNode(ProbabilityNode(frozenset({"Y"})), sumset=frozenset({"Y"}))
+        latex = ProductNode([ProbabilityNode(frozenset({"X"})), inner]).to_latex()
         assert r"\left[" in latex
         assert r"\right]" in latex
 
 
 class TestDivisionInit:
     def test_init(self, prob_y, prob_x):
-        d = Division(prob_y, prob_x)
+        d = DivisionNode(prob_y, prob_x)
         assert d.node_type == "division"
         assert len(d.children) == 2
         assert d.children[0] is prob_y
@@ -196,13 +199,13 @@ class TestDivisionInit:
 
 class TestDivisionToLatex:
     def test_to_latex(self):
-        num = Prob(frozenset({"Y"}), do=frozenset({"X"}))
-        den = Prob(frozenset({"Z"}), do=frozenset({"X"}))
-        assert Division(num, den).to_latex() == r"\frac{P(Y \mid do(X))}{P(Z \mid do(X))}"
+        num = ProbabilityNode(frozenset({"Y"}), do=frozenset({"X"}))
+        den = ProbabilityNode(frozenset({"Z"}), do=frozenset({"X"}))
+        assert DivisionNode(num, den).to_latex() == r"\frac{P(Y \mid do(X))}{P(Z \mid do(X))}"
 
-        num2 = Prob(frozenset({"Y", "Z"}), do=frozenset({"X"}))
-        den2 = Prob(frozenset({"Z"}), do=frozenset({"X"}))
-        latex = Division(num2, den2).to_latex()
+        num2 = ProbabilityNode(frozenset({"Y", "Z"}), do=frozenset({"X"}))
+        den2 = ProbabilityNode(frozenset({"Z"}), do=frozenset({"X"}))
+        latex = DivisionNode(num2, den2).to_latex()
         assert latex.startswith(r"\frac{")
         assert r"P(Y, Z \mid do(X))" in latex
         assert r"P(Z \mid do(X))" in latex
@@ -241,7 +244,7 @@ class TestTreeTraversal:
         assert len(find_leaves(frontdoor_expr.root)) == 3
         assert len(find_leaves(bowarc_expr.root)) == 3
 
-        d = Division(prob_y, prob_x)
+        d = DivisionNode(prob_y, prob_x)
         assert len(d.children) == 2
         assert d.children[0] is prob_y
         assert d.children[1] is prob_x
