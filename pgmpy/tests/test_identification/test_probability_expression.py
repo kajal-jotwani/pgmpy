@@ -86,10 +86,6 @@ def find_leaves(node):
 
 
 class TestTreeNodeAbstract:
-    def test_cannot_instantiate(self):
-        with pytest.raises(TypeError):
-            _TreeNode()
-
     def test_concrete_subclasses_are_tree_nodes(self, prob_y, prob_x):
         assert isinstance(prob_y, _TreeNode)
         assert isinstance(Marginal(prob_y, sumset=frozenset({"Y"})), _TreeNode)

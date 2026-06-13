@@ -1,9 +1,6 @@
-from abc import ABC, abstractmethod
-
-
-class _TreeNode(ABC):
+class _TreeNode:
     """
-    Private abstract base class for all expression tree nodes.
+    Private base class for all expression tree nodes.
 
     Not part of the public API. Provides the shared interface that makes
     uniform tree traversal possible: every node exposes ``node_type``
@@ -21,7 +18,6 @@ class _TreeNode(ABC):
     # Each subclass sets self.children in __init__.
     children = []
 
-    @abstractmethod
     def to_latex(self):
         """Return a LaTeX string representation of this node.
 
@@ -31,7 +27,6 @@ class _TreeNode(ABC):
         """
         raise NotImplementedError
 
-    @abstractmethod
     def __repr__(self):
         """Return an unambiguous string representation of this node.
 
