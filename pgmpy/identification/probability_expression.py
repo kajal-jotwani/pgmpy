@@ -50,10 +50,6 @@ class ProbabilityNode(_TreeNode):
 
         P(variables | do(do_vars), cond)
 
-    with an optional inline marginalisation over ``sumset``::
-
-        sum_{sumset} P(variables | do(do_vars), cond)
-
     Parameters
     ----------
     variables : frozenset of str
@@ -69,11 +65,6 @@ class ProbabilityNode(_TreeNode):
     cond : frozenset of str, optional
         Variables being passively conditioned on.
         Example: ``frozenset({"Z"})`` renders after the conditioning bar.
-        Default: ``frozenset()``.
-
-    sumset : frozenset of str, optional
-        Variables summed out directly at this node (inline marginalisation).
-        Example: ``frozenset({"Z"})`` prepends ``\\sum_{Z}`` to the term.
         Default: ``frozenset()``.
 
     Attributes
@@ -103,12 +94,10 @@ class ProbabilityNode(_TreeNode):
         variables,
         do=frozenset(),
         cond=frozenset(),
-        sumset=frozenset(),
     ):
         self.variables = frozenset(variables)
         self.do = frozenset(do)
         self.cond = frozenset(cond)
-        self.sumset = frozenset(sumset)
         self.children = []
 
     def to_latex(self):
@@ -117,7 +106,6 @@ class ProbabilityNode(_TreeNode):
 
         The conditioning bar is omitted when both ``do`` and ``cond`` are
         empty.  ``do(·)`` is always rendered before passive conditioning.
-        The ``sumset`` prefix is prepended when non-empty.
 
         Returns
         -------
@@ -143,8 +131,6 @@ class ProbabilityNode(_TreeNode):
 
         prob_str = "P(" + inner + ")"
 
-        if self.sumset:
-            return r"\sum_{" + self._vars_to_latex(self.sumset) + "} " + prob_str
         return prob_str
 
     def __repr__(self):
@@ -153,8 +139,6 @@ class ProbabilityNode(_TreeNode):
             parts.append(f"do={set(self.do)!r}")
         if self.cond:
             parts.append(f"cond={set(self.cond)!r}")
-        if self.sumset:
-            parts.append(f"sumset={set(self.sumset)!r}")
         return "ProbabilityNode(" + ", ".join(parts) + ")"
 
 

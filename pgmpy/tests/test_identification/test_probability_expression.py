@@ -99,25 +99,24 @@ class TestProbInit:
             frozenset({"Y"}),
             do=frozenset({"X"}),
             cond=frozenset({"Z"}),
-            sumset=frozenset({"W"}),
         )
         assert p.node_type == "prob"
         assert p.children == []
         assert p.variables == frozenset({"Y"})
         assert p.do == frozenset({"X"})
         assert p.cond == frozenset({"Z"})
-        assert p.sumset == frozenset({"W"})
 
         p_defaults = ProbabilityNode(frozenset({"Y"}))
         assert p_defaults.do == frozenset()
         assert p_defaults.cond == frozenset()
-        assert p_defaults.sumset == frozenset()
 
-        p_coerced = ProbabilityNode(["Y"], do=["X"], cond=["Z"], sumset=["W"])
+        p_coerced = ProbabilityNode(["Y"], do=["X"], cond=["Z"])
         assert isinstance(p_coerced.variables, frozenset)
         assert isinstance(p_coerced.do, frozenset)
         assert isinstance(p_coerced.cond, frozenset)
-        assert isinstance(p_coerced.sumset, frozenset)
+
+        with pytest.raises(TypeError):
+            ProbabilityNode(["Y"], sumset=["W"])
 
 
 class TestProbToLatex:
@@ -131,9 +130,9 @@ class TestProbToLatex:
         )
         assert ProbabilityNode(frozenset({"Z", "Y"})).to_latex() == "P(Y, Z)"
         assert ProbabilityNode(frozenset({"Y"}), cond=frozenset({"Z", "X"})).to_latex() == r"P(Y \mid X, Z)"
-        latex = ProbabilityNode(frozenset({"Y", "Z"}), sumset=frozenset({"Z"})).to_latex()
+        latex = MarginalNode(ProbabilityNode(frozenset({"Y", "Z"})), sumset=frozenset({"Z"})).to_latex()
         assert latex == r"\sum_{Z} P(Y, Z)"
-        latex_multi = ProbabilityNode(frozenset({"X", "Y", "Z"}), sumset=frozenset({"X", "Z"})).to_latex()
+        latex_multi = MarginalNode(ProbabilityNode(frozenset({"X", "Y", "Z"})), sumset=frozenset({"X", "Z"})).to_latex()
         assert latex_multi.startswith(r"\sum_{X, Z}")
 
 
