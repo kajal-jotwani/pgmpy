@@ -39,7 +39,7 @@ class _TreeNode:
 
 
 class ProbabilityNode(_TreeNode):
-    """
+    r"""
     Leaf node of the expression tree.
 
     Represents an atomic conditional probability term::
@@ -343,13 +343,15 @@ class ProbabilityExpressionTree:
     ...     ProbabilityNode(frozenset({"Y"}), cond=frozenset({"Z", "X"})),
     ...     ProbabilityNode(frozenset({"X"})),
     ... ])
-    >>> expr = ProbabilityExpressionTree(root=MarginalNode(
-    ...     ProductNode([
-    ...         ProbabilityNode(frozenset({"Z"}), cond=frozenset({"X"})),
-    ...         MarginalNode(inner, sumset=frozenset({"X"})),
-    ...     ]),
-    ...     sumset=frozenset({"Z"})),
-    ... ))
+    >>> expr = ProbabilityExpressionTree(
+    ...     root=MarginalNode(
+    ...         ProductNode([
+    ...             ProbabilityNode(frozenset({"Z"}), cond=frozenset({"X"})),
+    ...             MarginalNode(inner, sumset=frozenset({"X"})),
+    ...         ]),
+    ...         sumset=frozenset({"Z"}),
+    ...     )
+    ... )
     >>> expr.to_latex()
     '\\sum_{Z} P(Z \\mid X) \\left[ \\sum_{X} P(Y \\mid X, Z) P(X) \\right]'
     """
