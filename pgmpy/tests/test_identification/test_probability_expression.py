@@ -29,7 +29,7 @@ def prob_y_cond_x():
 def frontdoor_expr():
     """
     ProbabilityExpressionTree for the frontdoor formula:
-        sum_M [ P(M|X) * sum_{X'} [ P(Y|M,X') P(X') ] ]
+        sum_M [ P(M|X) * sum_X [ P(Y|M,X) P(X) ] ]
     """
     inner_product = ProductNode(
         [
@@ -51,7 +51,7 @@ def frontdoor_expr():
 def bowarc_expr():
     """
     ProbabilityExpressionTree for the bow-arc formula:
-        sum_Z [ P(Z|X) * sum_{X'} [ P(Y|Z,X') P(X') ] ]
+        sum_Z [ P(Z|X) * sum_X [ P(Y|Z,X) P(X) ] ]
     """
     inner_product = ProductNode(
         [
@@ -70,14 +70,14 @@ def bowarc_expr():
 
 
 def collect_node_types(node):
-    types = [node.node_type]
+    types = [type(node).__name__]
     for child in node.children:
         types.extend(collect_node_types(child))
     return types
 
 
 def find_leaves(node):
-    if node.node_type == "prob":
+    if isinstance(node, ProbabilityNode):
         return [node]
     leaves = []
     for child in node.children:
@@ -100,7 +100,6 @@ class TestProbInit:
             do=frozenset({"X"}),
             cond=frozenset({"Z"}),
         )
-        assert p.node_type == "prob"
         assert p.children == []
         assert p.variables == frozenset({"Y"})
         assert p.do == frozenset({"X"})
@@ -139,7 +138,7 @@ class TestProbToLatex:
 class TestMarginalInit:
     def test_init(self, prob_y):
         m = MarginalNode(prob_y, sumset=frozenset({"Y"}))
-        assert m.node_type == "sum"
+        assert isinstance(m, MarginalNode)
         assert len(m.children) == 1
         assert m.children[0] is prob_y
         assert isinstance(m.sumset, frozenset)
@@ -159,7 +158,7 @@ class TestMarginalToLatex:
 class TestProductInit:
     def test_init(self, prob_y, prob_x, prob_y_cond_x):
         prod = ProductNode([prob_y, prob_x])
-        assert prod.node_type == "product"
+        assert isinstance(prod, ProductNode)
         assert len(prod.children) == 2
         assert prod.children[0] is prob_y
         assert prod.children[1] is prob_x
@@ -190,7 +189,7 @@ class TestProductToLatex:
 class TestDivisionInit:
     def test_init(self, prob_y, prob_x):
         d = DivisionNode(prob_y, prob_x)
-        assert d.node_type == "division"
+        assert isinstance(d, DivisionNode)
         assert len(d.children) == 2
         assert d.children[0] is prob_y
         assert d.children[1] is prob_x
@@ -234,9 +233,25 @@ class TestProbabilityExpressionTreeToLatex:
 
 class TestTreeTraversal:
     def test_collect_node_types(self, frontdoor_expr, bowarc_expr, prob_y):
-        assert collect_node_types(frontdoor_expr.root) == ["sum", "product", "prob", "sum", "product", "prob", "prob"]
-        assert collect_node_types(bowarc_expr.root) == ["sum", "product", "prob", "sum", "product", "prob", "prob"]
-        assert collect_node_types(prob_y) == ["prob"]
+        assert collect_node_types(frontdoor_expr.root) == [
+            "MarginalNode",
+            "ProductNode",
+            "ProbabilityNode",
+            "MarginalNode",
+            "ProductNode",
+            "ProbabilityNode",
+            "ProbabilityNode",
+        ]
+        assert collect_node_types(bowarc_expr.root) == [
+            "MarginalNode",
+            "ProductNode",
+            "ProbabilityNode",
+            "MarginalNode",
+            "ProductNode",
+            "ProbabilityNode",
+            "ProbabilityNode",
+        ]
+        assert collect_node_types(prob_y) == ["ProbabilityNode"]
 
     def test_find_leaves(self, frontdoor_expr, bowarc_expr, prob_y, prob_x):
         assert all(leaf.children == [] for leaf in find_leaves(frontdoor_expr.root))
@@ -251,7 +266,7 @@ class TestTreeTraversal:
 
 class TestFrontdoorLatex:
     """
-    Frontdoor formula: sum_M [ P(M|X) * sum_{X'} [ P(Y|M,X') P(X') ] ]
+    Frontdoor formula: sum_M [ P(M|X) * sum_X [ P(Y|M,X) P(X) ] ]
 
     P(Y|do(X)) in a model with mediator M and hidden confounder between X and Y.
     Reference: Pearl (2009), Causality, Example 3.3.2.
@@ -268,13 +283,13 @@ class TestFrontdoorLatex:
         assert r"\right]" in latex
 
     def test_tree_structure(self, frontdoor_expr):
-        assert frontdoor_expr.root.node_type == "sum"
+        assert isinstance(frontdoor_expr.root, MarginalNode)
         assert frontdoor_expr.root.sumset == frozenset({"M"})
 
 
 class TestBowArcLatex:
     """
-    Bow-arc formula: sum_Z [ P(Z|X) * sum_{X'} [ P(Y|Z,X') P(X') ] ]
+    Bow-arc formula: sum_Z [ P(Z|X) * sum_X [ P(Y|Z,X) P(X) ] ]
 
     P(Y|do(X)) for the bow-arc graph (X->Z->Y, X<->Z). Role-based methods
     cannot derive this; it requires the ID algorithm.
@@ -292,5 +307,5 @@ class TestBowArcLatex:
         assert r"\right]" in latex
 
     def test_tree_structure(self, bowarc_expr):
-        assert bowarc_expr.root.node_type == "sum"
+        assert isinstance(bowarc_expr.root, MarginalNode)
         assert bowarc_expr.root.sumset == frozenset({"Z"})

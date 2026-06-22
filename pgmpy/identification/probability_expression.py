@@ -3,17 +3,13 @@ class _TreeNode:
     Private base class for all expression tree nodes.
 
     Not part of the public API. Provides the shared interface that makes
-    uniform tree traversal possible: every node exposes ``node_type``
-    (str), ``children`` (list of _TreeNode), ``to_latex()`` (str), and
-    ``__repr__()`` (str).
+    uniform tree traversal possible: every node exposes ``children``
+    (list of _TreeNode), ``to_latex()`` (str), and ``__repr__()`` (str).
 
     Concrete subclasses: ProbabilityNode, MarginalNode, ProductNode, DivisionNode.
 
     Do not instantiate directly.
     """
-
-    # Each subclass overrides this with a fixed string literal.
-    node_type = ""
 
     # Each subclass sets self.children in __init__.
     children = []
@@ -69,9 +65,6 @@ class ProbabilityNode(_TreeNode):
 
     Attributes
     ----------
-    node_type : str
-        Always ``"prob"``.
-
     children : list
         Always ``[]``. ``ProbabilityNode`` is always a leaf node.
 
@@ -81,13 +74,11 @@ class ProbabilityNode(_TreeNode):
     'P(Y)'
 
     >>> ProbabilityNode(frozenset({"Y"}), cond=frozenset({"X"})).to_latex()
-    'P(Y \\\\mid X)'
+    'P(Y \\mid X)'
 
     >>> ProbabilityNode(frozenset({"Y"}), do=frozenset({"X"})).to_latex()
-    'P(Y \\\\mid do(X))'
+    'P(Y \\mid do(X))'
     """
-
-    node_type = "prob"
 
     def __init__(
         self,
@@ -101,20 +92,21 @@ class ProbabilityNode(_TreeNode):
         self.children = []
 
     def to_latex(self):
-        """
+        r"""
         Return LaTeX for this atomic probability term.
 
         The conditioning bar is omitted when both ``do`` and ``cond`` are
-        empty.  ``do(·)`` is always rendered before passive conditioning.
+        empty. ``do(·)`` is always rendered before passive conditioning.
 
         Returns
         -------
         str
+            LaTeX string of the form ``P(variables \mid do(...), cond)``.
 
         Examples
         --------
         >>> ProbabilityNode(frozenset({"Y"}), do=frozenset({"X"}), cond=frozenset({"Z"})).to_latex()
-        'P(Y \\\\mid do(X), Z)'
+        'P(Y \\mid do(X), Z)'
         """
         variables_str = self._vars_to_latex(self.variables)
 
@@ -129,9 +121,7 @@ class ProbabilityNode(_TreeNode):
         else:
             inner = variables_str
 
-        prob_str = "P(" + inner + ")"
-
-        return prob_str
+        return "P(" + inner + ")"
 
     def __repr__(self):
         parts = [f"variables={set(self.variables)!r}"]
@@ -143,14 +133,14 @@ class ProbabilityNode(_TreeNode):
 
 
 class MarginalNode(_TreeNode):
-    """
+    r"""
     Internal node representing a marginalisation over a sub-expression::
 
         sum_{sumset} child
 
     Parameters
     ----------
-    child : ProbabilityNode or MarginalNode or ProductNode or DivisionNode
+    child : _TreeNode
         The expression being summed over. Stored as ``children[0]``.
 
     sumset : frozenset of str
@@ -158,9 +148,6 @@ class MarginalNode(_TreeNode):
 
     Attributes
     ----------
-    node_type : str
-        Always ``"sum"``.
-
     children : list of length 1
         ``children[0]`` is the child expression.
 
@@ -171,10 +158,8 @@ class MarginalNode(_TreeNode):
     ...     sumset=frozenset({"X"}),
     ... )
     >>> m.to_latex()
-    '\\\\sum_{X} P(Y \\\\mid X)'
+    '\\sum_{X} P(Y \\mid X)'
     """
-
-    node_type = "sum"
 
     def __init__(self, child, sumset):
         self.sumset = frozenset(sumset)
@@ -190,6 +175,7 @@ class MarginalNode(_TreeNode):
         Returns
         -------
         str
+            A LaTeX string of the form ``\\sum_{X} <child_latex>``.
         """
         sumset_str = self._vars_to_latex(self.sumset)
         child_latex = self.children[0].to_latex()
@@ -200,14 +186,14 @@ class MarginalNode(_TreeNode):
 
 
 class ProductNode(_TreeNode):
-    """
+    r"""
     Internal node representing a product of two or more sub-expressions::
 
         factors[0] * factors[1] * ... * factors[n]
 
     Parameters
     ----------
-    factors : list of (ProbabilityNode or MarginalNode or ProductNode or DivisionNode)
+    factors : list of _TreeNode
         The expressions being multiplied. Must have at least two elements.
 
     Raises
@@ -217,9 +203,6 @@ class ProductNode(_TreeNode):
 
     Attributes
     ----------
-    node_type : str
-        Always ``"product"``.
-
     children : list of length >= 2
         The factor nodes in the order given.
 
@@ -229,10 +212,8 @@ class ProductNode(_TreeNode):
     ...     ProbabilityNode(frozenset({"Y"}), cond=frozenset({"X"})),
     ...     ProbabilityNode(frozenset({"X"})),
     ... ]).to_latex()
-    'P(Y \\\\mid X) P(X)'
+    'P(Y \\mid X) P(X)'
     """
-
-    node_type = "product"
 
     def __init__(self, factors):
         if len(factors) < 2:
@@ -249,6 +230,8 @@ class ProductNode(_TreeNode):
         Returns
         -------
         str
+            LaTeX string of space-separated factors, with composite
+            children wrapped in ``\left[ ... \right]``.
         """
         parts = []
         for child in self.children:
@@ -264,24 +247,21 @@ class ProductNode(_TreeNode):
 
 
 class DivisionNode(_TreeNode):
-    """
+    r"""
     Internal node representing a ratio of two sub-expressions::
 
         numerator / denominator
 
     Parameters
     ----------
-    numerator : ProbabilityNode or MarginalNode or ProductNode or DivisionNode
+    numerator : _TreeNode
         The numerator expression. Stored as ``children[0]``.
 
-    denominator : ProbabilityNode or MarginalNode or ProductNode or DivisionNode
+    denominator : _TreeNode
         The denominator expression. Stored as ``children[1]``.
 
     Attributes
     ----------
-    node_type : str
-        Always ``"division"``.
-
     children : list of length 2
         ``children[0]`` is the numerator; ``children[1]`` is the denominator.
 
@@ -291,7 +271,7 @@ class DivisionNode(_TreeNode):
     ...     ProbabilityNode(frozenset({"Y"}), do=frozenset({"X"})),
     ...     ProbabilityNode(frozenset({"Z"}), do=frozenset({"X"})),
     ... ).to_latex()
-    '\\\\frac{P(Y \\\\mid do(X))}{P(Z \\\\mid do(X))}'
+    '\\frac{P(Y \\mid do(X))}{P(Z \\mid do(X))}'
     """
 
     node_type = "division"
@@ -316,48 +296,49 @@ class DivisionNode(_TreeNode):
 
 
 class ProbabilityExpressionTree:
-    """
+    r"""
     Container for expression trees produced by identification algorithms.
 
-    `ProbabilityExpressionTree` is a lightweight container that holds the root
+    ``ProbabilityExpressionTree`` is a lightweight container that holds the root
     of a symbolic probability expression tree. It is the public object
     returned by causal identification routines and is not itself a tree
     node.
 
-    The expression tree is composed of `ProbabilityNode`, `MarginalNode`,
-    `ProductNode`, and `DivisionNode` nodes (all subclasses of `_TreeNode`).
-    Inspect or traverse the
-    tree via the `root` attribute and the `children` lists on nodes.
+    The expression tree is composed of ``ProbabilityNode``, ``MarginalNode``,
+    ``ProductNode``, and ``DivisionNode`` nodes (all subclasses of ``_TreeNode``).
+    Inspect or traverse the tree via the ``root`` attribute and the ``children``
+    lists on nodes.
 
     Parameters
     ----------
-    root : ProbabilityNode | MarginalNode | ProductNode | DivisionNode
-        Root node of the expression tree. Must be an instance of `_TreeNode`.
+    root : _TreeNode
+        Root node of the expression tree. Must be an instance of ``_TreeNode``.
 
     Raises
     ------
     TypeError
-        If `root` is not an instance of `_TreeNode`.
+        If ``root`` is not an instance of ``_TreeNode``.
 
     Attributes
     ----------
-    root : ProbabilityNode | MarginalNode | ProductNode | DivisionNode
+    root : _TreeNode
         The expression tree root. Sub-nodes are accessible via
-        `root.children`.
+        ``root.children``.
 
     Notes
     -----
-    The `to_latex()` method delegates to `self.root.to_latex()` and
-    returns a complete LaTeX representation suitable for math
-    environments. Rendering proceeds bottom-up: leaf `ProbabilityNode` nodes render
+    The ``to_latex()`` method delegates to ``self.root.to_latex()`` and
+    returns a complete LaTeX representation suitable for math environments.
+    Rendering proceeds bottom-up: leaf ``ProbabilityNode`` nodes render
     themselves and internal nodes combine their children's strings using
-    the appropriate notation (e.g. `\\sum`, `\frac`, brackets).
+    the appropriate notation (e.g. ``\sum``, ``\frac``, brackets).
 
     Examples
     --------
     Build the bow-arc formula
-    ``\\sum_Z [ P(Z|X) \\cdot \\sum_{X'} [ P(Y|Z,X') P(X') ] ]``:
+    ``\sum_Z P(Z|X) [ \sum_X P(Y|Z,X) P(X) ]``:
 
+    >>> from pgmpy.identification import ProbabilityExpressionTree
     >>> inner = ProductNode([
     ...     ProbabilityNode(frozenset({"Y"}), cond=frozenset({"Z", "X"})),
     ...     ProbabilityNode(frozenset({"X"})),
@@ -367,14 +348,10 @@ class ProbabilityExpressionTree:
     ...         ProbabilityNode(frozenset({"Z"}), cond=frozenset({"X"})),
     ...         MarginalNode(inner, sumset=frozenset({"X"})),
     ...     ]),
-    ...     sumset=frozenset({"Z"}),
+    ...     sumset=frozenset({"Z"})),
     ... ))
     >>> expr.to_latex()
-    '\\\\sum_{Z} P(Z \\\\mid X) \\\\left[ \\\\sum_{X} P(Y \\\\mid X, Z) P(X) \\\\right]'
-    >>> expr.root.node_type
-    'sum'
-    >>> expr.root.children[0].node_type
-    'product'
+    '\\sum_{Z} P(Z \\mid X) \\left[ \\sum_{X} P(Y \\mid X, Z) P(X) \\right]'
     """
 
     def __init__(self, root):
@@ -386,7 +363,7 @@ class ProbabilityExpressionTree:
         self.root = root
 
     def to_latex(self):
-        """
+        r"""
         Return a LaTeX string for the full causal expression.
 
         Starts the recursive ``to_latex()`` traversal from the root node.
@@ -401,11 +378,12 @@ class ProbabilityExpressionTree:
 
         Examples
         --------
+        >>> from pgmpy.identification import ProbabilityExpressionTree
         >>> expr = ProbabilityExpressionTree(
         ...     root=ProbabilityNode(frozenset({"Y"}), cond=frozenset({"X"}))
         ... )
         >>> expr.to_latex()
-        'P(Y \\\\mid X)'
+        'P(Y \\mid X)'
         """
         return self.root.to_latex()
 
