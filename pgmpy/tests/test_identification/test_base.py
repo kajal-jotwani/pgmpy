@@ -1,7 +1,7 @@
 import pytest
 
 from pgmpy.base import ADMG, DAG, PDAG
-from pgmpy.identification import BaseFormulaIdentification, BaseIdentification
+from pgmpy.identification import BaseFormulaIdentification, BaseGraphicalIdentification
 
 
 @pytest.fixture
@@ -11,7 +11,7 @@ def cg():
     return DAG(ebunch=edges, roles=roles)
 
 
-class DummyIdentification(BaseIdentification):
+class DummyIdentification(BaseGraphicalIdentification):
     """Sorts non-exposure and non-outcome nodes in the graph and assigns the
     first or the last one as adjustment node depending on the `variant`.
     """
@@ -35,7 +35,7 @@ class DummyIdentification(BaseIdentification):
             return causal_graph, False
 
 
-class TestBaseIdentification:
+class TestBaseGraphicalIdentification:
     def test_base_identification_first(self, cg):
         identifier = DummyIdentification(variant="first")
         identified_cg, is_identified = identifier(causal_graph=cg)
