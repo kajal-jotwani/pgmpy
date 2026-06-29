@@ -107,13 +107,17 @@ class BaseFormulaIdentification:
         The symbolic formula for the identified causal effect.
 
     False
-        If the causal effect is not identifiable.
+        If the causal effect is not identifiable. The witness subgraph is
+        stored in ``self.hedge_``.
 
     Examples
     --------
     >>> from pgmpy.identification import BaseFormulaIdentification
-    >>> from pgmpy.identification.probability_expression import ProbabilityExpressionTree, ProbabilityNode
+    >>> from pgmpy.identification.probability_expression import (
+    ...     ProbabilityExpressionTree, ProbabilityNode
+    ... )
     >>> class SimpleFormulaId(BaseFormulaIdentification):
+    ...     supported_graph_types = (DAG,)
     ...     def _identify(self, causal_graph):
     ...         y = causal_graph.get_role("outcomes")
     ...         x = causal_graph.get_role("exposures")
@@ -125,7 +129,7 @@ class BaseFormulaIdentification:
     supported_graph_types = ()
     required_roles = ("exposures", "outcomes")
 
-    def _validate_query(self, causal_graph):
+    def _validate_causal_graph(self, causal_graph):
         """Validate the causal graph before running identification.
 
         Checks that:
@@ -165,8 +169,8 @@ class BaseFormulaIdentification:
         """
         Run the identification algorithm on a causal graph.
 
-        Validates the graph via ``_validate_query``, then delegates to
-        ``_identify``.
+        Validates the graph via ``_validate_causal_graph``, resets
+        ``self.hedge_`` to ``None``, then delegates to ``_identify``.
 
         Parameters
         ----------
@@ -185,12 +189,12 @@ class BaseFormulaIdentification:
             If the causal effect is not identifiable. The witness subgraph is
             stored in ``self.hedge_``.
         """
-        self._validate_query(causal_graph)
+        self._validate_causal_graph(causal_graph)
         self.hedge_ = None
         return self._identify(causal_graph)
 
     def _identify(self, causal_graph):
-        """Override in subclasses to implement the algorithm.
+        """Override in subclasses to implement the identification algorithm.
 
         Parameters
         ----------
