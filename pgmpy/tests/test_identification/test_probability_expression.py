@@ -72,6 +72,28 @@ def bowarc_expr():
     return ProbabilityExpressionTree(root=MarginalNode(outer_product, sumset=frozenset({"Z"})))
 
 
+@pytest.fixture
+def conditional_id_expr():
+    """
+    A conditional-identification-style expression that nests a DivisionNode under a
+    MarginalNode -- the ratio-of-products shape the IDC algorithm produces:
+
+        sum_Z [ ( P(Y | X, Z) P(Z) ) / P(Z | X) ]
+
+    Not claimed to be the identification result for any particular graph; it exists to
+    exercise DivisionNode inside a realistic composition.
+    """
+    numerator = ProductNode(
+        [
+            ProbabilityNode(frozenset({"Y"}), cond=frozenset({"X", "Z"})),
+            ProbabilityNode(frozenset({"Z"})),
+        ]
+    )
+    denominator = ProbabilityNode(frozenset({"Z"}), cond=frozenset({"X"}))
+    ratio = DivisionNode(numerator, denominator)
+    return ProbabilityExpressionTree(root=MarginalNode(ratio, sumset=frozenset({"Z"})))
+
+
 class TestTreeNodeAbstract:
     def test_concrete_subclasses_are_tree_nodes(self, prob_y, prob_x):
         assert isinstance(prob_y, _TreeNode)
@@ -100,6 +122,9 @@ class TestProbabilityNode:
         with pytest.raises(TypeError):
             ProbabilityNode(["Y"], sumset=["W"])
 
+        with pytest.raises(ValueError, match="at least one variable"):
+            ProbabilityNode(frozenset())
+
     def test_to_latex(self):
         assert ProbabilityNode(frozenset({"Y"})).to_latex() == "P(Y)"
         assert ProbabilityNode(frozenset({"Y"}), cond=frozenset({"X"})).to_latex() == r"P(Y \mid X)"
@@ -126,6 +151,9 @@ class TestMarginalNode:
         assert m.children[0] is prob_y
         assert isinstance(m.sumset, frozenset)
         assert m.sumset == frozenset({"Y"})
+
+        with pytest.raises(ValueError, match="sum over"):
+            MarginalNode(prob_y, sumset=frozenset())
 
     def test_to_latex(self):
         inner = ProbabilityNode(frozenset({"Y"}), cond=frozenset({"X"}))
@@ -257,14 +285,7 @@ class TestFrontdoorFormula:
         assert frontdoor_expr.root.sumset == frozenset({"M"})
 
     def test_to_latex(self, frontdoor_expr):
-        latex = frontdoor_expr.to_latex()
-        assert r"\sum_{M}" in latex
-        assert r"\sum_{X}" in latex
-        assert r"P(M \mid X)" in latex
-        assert "P(X)" in latex
-        assert r"P(Y \mid M, X)" in latex
-        assert r"\left[" in latex
-        assert r"\right]" in latex
+        assert frontdoor_expr.to_latex() == (r"\sum_{M} P(M \mid X) \left[ \sum_{X} P(Y \mid M, X) P(X) \right]")
 
 
 class TestBowArcFormula:
@@ -282,14 +303,7 @@ class TestBowArcFormula:
         assert bowarc_expr.root.sumset == frozenset({"Z"})
 
     def test_to_latex(self, bowarc_expr):
-        latex = bowarc_expr.to_latex()
-        assert r"\sum_{Z}" in latex
-        assert r"\sum_{X}" in latex
-        assert r"P(Z \mid do(X))" in latex
-        assert r"P(Y \mid do(X), Z)" in latex
-        assert "P(X)" in latex
-        assert r"\left[" in latex
-        assert r"\right]" in latex
+        assert bowarc_expr.to_latex() == (r"\sum_{Z} P(Z \mid do(X)) \left[ \sum_{X} P(Y \mid do(X), Z) P(X) \right]")
 
 
 class TestNodeEquality:
@@ -335,3 +349,19 @@ class TestNodeEquality:
         # ...but factor multiplicity still matters, and division stays order-sensitive.
         assert ProductNode([px, px, py]) != ProductNode([px, py])
         assert DivisionNode(px, py) != DivisionNode(py, px)
+
+
+class TestConditionalIdFormula:
+    def test_tree_and_latex(self, conditional_id_expr):
+        # Structure: a marginal over a ratio whose numerator is a product.
+        assert conditional_id_expr.collect_node_types() == [
+            MarginalNode,
+            DivisionNode,
+            ProductNode,
+            ProbabilityNode,
+            ProbabilityNode,
+            ProbabilityNode,
+        ]
+        assert len(conditional_id_expr.find_leaves()) == 3
+        # DivisionNode renders the numerator product un-bracketed (the \frac already groups it).
+        assert conditional_id_expr.to_latex() == r"\sum_{Z} \frac{P(Y \mid X, Z) P(Z)}{P(Z \mid X)}"

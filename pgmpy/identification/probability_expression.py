@@ -14,8 +14,6 @@ class _TreeNode:
     Do not instantiate directly.
     """
 
-    children = []
-
     @staticmethod
     def _vars_to_latex(var_set):
         """Sort and join variable names for deterministic LaTeX output."""
@@ -66,6 +64,11 @@ class ProbabilityNode(_TreeNode):
         Example: ``frozenset({"Z"})`` renders after the conditioning bar.
         Default: ``frozenset()``.
 
+    Raises
+    ------
+    ValueError
+        If ``variables`` is empty.
+
     Attributes
     ----------
     children : list
@@ -84,6 +87,8 @@ class ProbabilityNode(_TreeNode):
 
     def __init__(self, variables, do=frozenset(), cond=frozenset()):
         self.variables = frozenset(variables)
+        if not self.variables:
+            raise ValueError("A probability term must have at least one variable.")
         self.do = frozenset(do)
         self.cond = frozenset(cond)
         self.children = []
@@ -158,6 +163,11 @@ class MarginalNode(_TreeNode):
     sumset : frozenset of str
         The variables being summed out.
 
+    Raises
+    ------
+    ValueError
+        If ``sumset`` is empty.
+
     Attributes
     ----------
     children : list of length 1
@@ -176,6 +186,8 @@ class MarginalNode(_TreeNode):
 
     def __init__(self, child, sumset):
         self.sumset = frozenset(sumset)
+        if not self.sumset:
+            raise ValueError("MarginalNode requires at least one variable to sum over.")
         self.children = [child]
 
     def to_latex(self):
