@@ -207,26 +207,26 @@ class TestProbabilityExpressionTree:
 
     def test_collect_node_types(self, frontdoor_expr, bowarc_expr, prob_y):
         single = ProbabilityExpressionTree(root=prob_y)
-        assert single.collect_node_types() == ["ProbabilityNode"]
+        assert single.collect_node_types() == [ProbabilityNode]
 
         assert frontdoor_expr.collect_node_types() == [
-            "MarginalNode",
-            "ProductNode",
-            "ProbabilityNode",
-            "MarginalNode",
-            "ProductNode",
-            "ProbabilityNode",
-            "ProbabilityNode",
+            MarginalNode,
+            ProductNode,
+            ProbabilityNode,
+            MarginalNode,
+            ProductNode,
+            ProbabilityNode,
+            ProbabilityNode,
         ]
 
         assert bowarc_expr.collect_node_types() == [
-            "MarginalNode",
-            "ProductNode",
-            "ProbabilityNode",
-            "MarginalNode",
-            "ProductNode",
-            "ProbabilityNode",
-            "ProbabilityNode",
+            MarginalNode,
+            ProductNode,
+            ProbabilityNode,
+            MarginalNode,
+            ProductNode,
+            ProbabilityNode,
+            ProbabilityNode,
         ]
 
     def test_find_leaves(self, frontdoor_expr, bowarc_expr, prob_y, prob_x):

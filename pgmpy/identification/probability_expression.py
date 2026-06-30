@@ -11,7 +11,6 @@ class _TreeNode:
     Do not instantiate directly.
     """
 
-    # Each subclass sets self.children in __init__.
     children = []
 
     @staticmethod
@@ -289,8 +288,6 @@ class DivisionNode(_TreeNode):
     '\\frac{P(Y \\mid do(X))}{P(Z \\mid do(X))}'
     """
 
-    node_type = "division"
-
     def __init__(self, numerator, denominator):
         self.children = [numerator, denominator]
 
@@ -401,7 +398,7 @@ class ProbabilityExpressionTree:
 
     def collect_node_types(self, node=None):
         """
-        Return a depth-first list of node type names for the subtree rooted at ``node``.
+        Return a depth-first list of node classes for the subtree rooted at ``node``.
 
         Parameters
         ----------
@@ -410,13 +407,13 @@ class ProbabilityExpressionTree:
 
         Returns
         -------
-        list of str
-            Node class names in depth-first (pre-order) traversal order.
-            Example: ``['MarginalNode', 'ProductNode', 'ProbabilityNode', ...]``.
+        list of type
+            Node classes in depth-first (pre-order) traversal order.
+            Example: ``[MarginalNode, ProductNode, ProbabilityNode, ...]``.
         """
         if node is None:
             node = self.root
-        types = [type(node).__name__]
+        types = [type(node)]
         for child in node.children:
             types.extend(self.collect_node_types(child))
         return types
