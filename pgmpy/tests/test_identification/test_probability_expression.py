@@ -290,3 +290,48 @@ class TestBowArcFormula:
         assert "P(X)" in latex
         assert r"\left[" in latex
         assert r"\right]" in latex
+
+
+class TestNodeEquality:
+    def test_eq_and_hash(self, frontdoor_expr):
+        # Same type + same attributes (modulo input coercion) => equal and hash-equal.
+        a = ProbabilityNode(frozenset({"Y"}), do=frozenset({"X"}), cond=frozenset({"Z"}))
+        b = ProbabilityNode(["Y"], do=["X"], cond=["Z"])
+        assert a == b and hash(a) == hash(b)
+        assert len({a, b}) == 1
+
+        # Differing attributes, differing type, and non-nodes are all unequal (no error).
+        assert a != ProbabilityNode(frozenset({"Y"}), do=frozenset({"X"}))
+        assert ProductNode([a, b]) != DivisionNode(a, b)  # identical children, different type
+        assert a != "not a node"
+
+        # Equality is structural and recursive: an independently rebuilt frontdoor tree matches.
+        rebuilt = ProbabilityExpressionTree(
+            root=MarginalNode(
+                ProductNode(
+                    [
+                        ProbabilityNode(frozenset({"M"}), cond=frozenset({"X"})),
+                        MarginalNode(
+                            ProductNode(
+                                [
+                                    ProbabilityNode(frozenset({"Y"}), cond=frozenset({"M", "X"})),
+                                    ProbabilityNode(frozenset({"X"})),
+                                ]
+                            ),
+                            sumset=frozenset({"X"}),
+                        ),
+                    ]
+                ),
+                sumset=frozenset({"M"}),
+            )
+        )
+        assert frontdoor_expr == rebuilt
+        assert hash(frontdoor_expr) == hash(rebuilt)
+
+        # Products are commutative: factor order changes neither equality nor hash...
+        px, py = ProbabilityNode(frozenset({"X"})), ProbabilityNode(frozenset({"Y"}))
+        assert ProductNode([px, py]) == ProductNode([py, px])
+        assert hash(ProductNode([px, py])) == hash(ProductNode([py, px]))
+        # ...but factor multiplicity still matters, and division stays order-sensitive.
+        assert ProductNode([px, px, py]) != ProductNode([px, py])
+        assert DivisionNode(px, py) != DivisionNode(py, px)

@@ -1,3 +1,6 @@
+from collections import Counter
+
+
 class _TreeNode:
     """
     Private base class for all expression tree nodes.
@@ -130,6 +133,14 @@ class ProbabilityNode(_TreeNode):
             parts.append(f"cond={set(self.cond)!r}")
         return "ProbabilityNode(" + ", ".join(parts) + ")"
 
+    def __eq__(self, other):
+        if not isinstance(other, ProbabilityNode):
+            return NotImplemented
+        return (self.variables, self.do, self.cond) == (other.variables, other.do, other.cond)
+
+    def __hash__(self):
+        return hash((self.variables, self.do, self.cond))
+
 
 class MarginalNode(_TreeNode):
     r"""
@@ -189,6 +200,14 @@ class MarginalNode(_TreeNode):
 
     def __repr__(self):
         return f"MarginalNode(child={self.children[0]!r}, sumset={set(self.sumset)!r})"
+
+    def __eq__(self, other):
+        if not isinstance(other, MarginalNode):
+            return NotImplemented
+        return self.sumset == other.sumset and self.children == other.children
+
+    def __hash__(self):
+        return hash((self.sumset, tuple(self.children)))
 
 
 class ProductNode(_TreeNode):
@@ -256,6 +275,17 @@ class ProductNode(_TreeNode):
     def __repr__(self):
         return "ProductNode([" + ", ".join(repr(c) for c in self.children) + "])"
 
+    def __eq__(self, other):
+        if not isinstance(other, ProductNode):
+            return NotImplemented
+        # A product is commutative, so factor order is irrelevant; compare as a multiset
+        # (multiplicity still matters: P(X) P(X) != P(X) P(Y)).
+        return Counter(self.children) == Counter(other.children)
+
+    def __hash__(self):
+        # Order-independent but multiplicity-aware, to stay consistent with __eq__.
+        return hash(frozenset(Counter(self.children).items()))
+
 
 class DivisionNode(_TreeNode):
     r"""
@@ -308,6 +338,14 @@ class DivisionNode(_TreeNode):
 
     def __repr__(self):
         return f"DivisionNode(numerator={self.children[0]!r}, denominator={self.children[1]!r})"
+
+    def __eq__(self, other):
+        if not isinstance(other, DivisionNode):
+            return NotImplemented
+        return self.children == other.children
+
+    def __hash__(self):
+        return hash(tuple(self.children))
 
 
 class ProbabilityExpressionTree:
@@ -440,6 +478,14 @@ class ProbabilityExpressionTree:
         for child in node.children:
             leaves.extend(self.find_leaves(child))
         return leaves
+
+    def __eq__(self, other):
+        if not isinstance(other, ProbabilityExpressionTree):
+            return NotImplemented
+        return self.root == other.root
+
+    def __hash__(self):
+        return hash(self.root)
 
     def __repr__(self):
         return repr(self.root)
