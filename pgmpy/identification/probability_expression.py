@@ -17,7 +17,7 @@ class _TreeNode:
     @staticmethod
     def _vars_to_latex(var_set):
         """Sort and join variable names for deterministic LaTeX output."""
-        return ", ".join(sorted(var_set))
+        return ", ".join(sorted((str(v) for v in var_set), key=str))
 
     def to_latex(self):
         """Return a LaTeX string representation of this node.
@@ -50,16 +50,16 @@ class ProbabilityNode(_TreeNode):
 
     Parameters
     ----------
-    variables : frozenset of str
+    variables : frozenset of hashable
         The random variables in the probability term.
         Example: ``frozenset({"Y"})`` renders as ``P(Y | ...)``.
 
-    do : frozenset of str, optional
+    do : frozenset of hashable, optional
         Variables being intervened on via the do-operator.
         Example: ``frozenset({"X"})`` renders as ``do(X)`` inside the conditioning bar.
         Default: ``frozenset()``.
 
-    cond : frozenset of str, optional
+    cond : frozenset of hashable, optional
         Variables being passively conditioned on.
         Example: ``frozenset({"Z"})`` renders after the conditioning bar.
         Default: ``frozenset()``.
@@ -160,7 +160,7 @@ class MarginalNode(_TreeNode):
     child : _TreeNode
         The expression being summed over. Stored as ``children[0]``.
 
-    sumset : frozenset of str
+    sumset : frozenset of hashable
         The variables being summed out.
 
     Raises
