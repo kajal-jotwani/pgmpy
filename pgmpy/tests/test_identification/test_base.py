@@ -1,7 +1,7 @@
 import pytest
 
-from pgmpy.base import DAG, PDAG
-from pgmpy.identification import BaseIdentification
+from pgmpy.base import ADMG, DAG, PDAG
+from pgmpy.identification import BaseFormulaIdentification, BaseIdentification
 
 
 @pytest.fixture
@@ -64,3 +64,89 @@ class TestBaseIdentification:
 
         assert is_identified == False
         assert identified_cg.get_role_dict() == {"exposures": ["X"], "outcomes": ["Y"]}
+
+
+@pytest.fixture
+def admg_bowarc():
+    return ADMG(
+        directed_ebunch=[("X", "Z"), ("Z", "Y")],
+        bidirected_ebunch=[("X", "Z")],
+        roles={"exposures": "X", "outcomes": "Y"},
+    )
+
+
+@pytest.fixture
+def admg_no_roles():
+    return ADMG(directed_ebunch=[("X", "Z"), ("Z", "Y")], bidirected_ebunch=[("X", "Z")])
+
+
+@pytest.fixture
+def admg_with_conditioning():
+    return ADMG(
+        directed_ebunch=[("X", "Z"), ("Z", "Y"), ("X", "Y")],
+        bidirected_ebunch=[("X", "Y")],
+        roles={"exposures": "X", "outcomes": "Y", "conditioning": "Z"},
+    )
+
+
+class DummyFormulaIdentification(BaseFormulaIdentification):
+    """Returns a fixed string instead of a ProbabilityExpressionTree, so the
+    base class contract can be tested without depending on the ID algorithm.
+    """
+
+    supported_graph_types = (ADMG, DAG)
+
+    def _identify(self, causal_graph):
+        return "identified"
+
+
+class DummyConditionalFormulaIdentification(BaseFormulaIdentification):
+    """Same as DummyFormulaIdentification but also requires a 'conditioning'
+    role, mirroring IDC.
+    """
+
+    supported_graph_types = (ADMG, DAG)
+    required_roles = ("exposures", "outcomes", "conditioning")
+
+    def _identify(self, causal_graph):
+        return "identified"
+
+
+class IncompleteFormulaIdentification(BaseFormulaIdentification):
+    """Does not override _identify, used to check the default raises
+    NotImplementedError.
+    """
+
+    supported_graph_types = (ADMG, DAG)
+
+
+class TestBaseFormulaIdentification:
+    def test_identify(self, admg_bowarc):
+        identifier = DummyFormulaIdentification()
+        assert identifier.identify(admg_bowarc) == "identified"
+        assert identifier(admg_bowarc) == "identified"
+
+    def test_identify_wrong_graph_type(self, admg_bowarc):
+        class DAGOnly(BaseFormulaIdentification):
+            supported_graph_types = (DAG,)
+
+            def _identify(self, causal_graph):
+                return "ok"
+
+        with pytest.raises(ValueError, match="must be an instance of"):
+            DAGOnly().identify(admg_bowarc)
+
+    def test_identify_missing_exposures_outcomes(self, admg_no_roles):
+        with pytest.raises(ValueError, match="exposures"):
+            DummyFormulaIdentification().identify(admg_no_roles)
+
+    def test_identify_missing_extra_required_role(self, admg_bowarc):
+        with pytest.raises(ValueError, match="conditioning"):
+            DummyConditionalFormulaIdentification().identify(admg_bowarc)
+
+    def test_identify_with_extra_required_role_present(self, admg_with_conditioning):
+        assert DummyConditionalFormulaIdentification().identify(admg_with_conditioning) == "identified"
+
+    def test_identify_not_implemented(self, admg_bowarc):
+        with pytest.raises(NotImplementedError):
+            IncompleteFormulaIdentification().identify(admg_bowarc)
