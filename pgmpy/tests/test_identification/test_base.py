@@ -1,7 +1,7 @@
 import pytest
 
 from pgmpy.base import ADMG, DAG, PDAG
-from pgmpy.identification import BaseFormulaIdentification, BaseIdentification
+from pgmpy.identification import BaseFormulaIdentification, BaseGraphicalIdentification
 
 
 @pytest.fixture
@@ -11,7 +11,7 @@ def cg():
     return DAG(ebunch=edges, roles=roles)
 
 
-class DummyIdentification(BaseIdentification):
+class DummyIdentification(BaseGraphicalIdentification):
     """Sorts non-exposure and non-outcome nodes in the graph and assigns the
     first or the last one as adjustment node depending on the `variant`.
     """
@@ -69,24 +69,25 @@ class TestBaseIdentification:
 @pytest.fixture
 def admg_bowarc():
     return ADMG(
-        directed_ebunch=[("X", "Z"), ("Z", "Y")],
-        bidirected_ebunch=[("X", "Z")],
-        roles={"exposures": "X", "outcomes": "Y"},
+        edge_list=[("X", "Z", "->"), ("Z", "Y", "->"), ("X", "Z", "<>")],
+        exposures={"X"},
+        outcomes={"Y"},
     )
 
 
 @pytest.fixture
 def admg_no_roles():
-    return ADMG(directed_ebunch=[("X", "Z"), ("Z", "Y")], bidirected_ebunch=[("X", "Z")])
+    return ADMG(edge_list=[("X", "Z", "->"), ("Z", "Y", "->"), ("X", "Z", "<>")])
 
 
 @pytest.fixture
 def admg_with_conditioning():
-    return ADMG(
-        directed_ebunch=[("X", "Z"), ("Z", "Y"), ("X", "Y")],
-        bidirected_ebunch=[("X", "Y")],
-        roles={"exposures": "X", "outcomes": "Y", "conditioning": "Z"},
+    admg = ADMG(
+        edge_list=[("X", "Z", "->"), ("Z", "Y", "->"), ("X", "Y", "->"), ("X", "Y", "<>")],
+        exposures={"X"},
+        outcomes={"Y"},
     )
+    return admg.with_role("conditioning", {"Z"}, inplace=False)
 
 
 class DummyFormulaIdentification(BaseFormulaIdentification):
