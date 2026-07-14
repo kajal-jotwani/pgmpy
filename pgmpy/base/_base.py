@@ -1329,10 +1329,10 @@ class _CoreGraph(nx.MultiGraph, _GraphAlgorithms, _GraphRolesMixin, _GraphPlotti
         >>> admg.get_district("Y")
         {'Y'}
         >>> admg = ADMG(edge_list=[("A", "B", "<>"), ("C", "D", "<>")])
-        >>> admg.get_district()
-        {frozenset({'A', 'B'}), frozenset({'C', 'D'})}
-        >>> admg.get_district(nodes=["A", "C"])
-        {frozenset({'A', 'B'}), frozenset({'C', 'D'})}
+        >>> sorted([sorted(list(c)) for c in admg.get_district()])
+        [['A', 'B'], ['C', 'D']]
+        >>> sorted([sorted(list(c)) for c in admg.get_district(nodes=["A", "C"])])
+        [['A', 'B'], ['C', 'D']]
 
         """
         if nodes is None or isinstance(nodes, (list, set, frozenset)):
