@@ -1,4 +1,4 @@
-from pgmpy.base import ADMG
+from pgmpy.base import ADMG, DAG
 from pgmpy.identification import BaseFormulaIdentification
 from pgmpy.identification.probability_expression import (
     MarginalNode,
@@ -9,7 +9,15 @@ from pgmpy.identification.probability_expression import (
 
 
 class ID(BaseFormulaIdentification):
-    """ID algorithm for causal effect identification.
+    """
+    Given a causal graph, identifies the causal effect using the ID algorithm.
+
+    The class implements the recursive identification procedure of
+    :footcite:t:`shpitser_2006` for ADMGs with exposure and outcome roles.
+    When the effect is identifiable, it returns a symbolic probability
+    expression for the interventional distribution. When the effect is not
+    identifiable, it returns ``False`` and stores the witness hedge in
+    ``self.hedge_``.
 
     Parameters
     ----------
@@ -37,14 +45,14 @@ class ID(BaseFormulaIdentification):
     >>> result = id_algo.identify(admg)
     """
 
-    supported_graph_types = (ADMG,)
+    supported_graph_types = (ADMG, DAG)
 
     def _identify(self, causal_graph):
         """Run the ID algorithm.
 
         Parameters
         ----------
-        causal_graph : ADMG
+        causal_graph : ADMG or DAG
             The causal graph with exposures and outcomes roles assigned.
 
         Returns
@@ -116,7 +124,7 @@ class ID(BaseFormulaIdentification):
             Intervention variables (what we intervene on).
         variables : frozenset
             All variables in the current subproblem.
-        causal_graph : ADMG
+        causal_graph : ADMG or DAG
             Current causal graph (may be a subgraph of the original).
         base_expr : ProbabilityNode or None
             The current probability expression. If None, use P(variables).
@@ -234,7 +242,7 @@ class ID(BaseFormulaIdentification):
         base_expr : ProbabilityNode or None
             The current probability expression. If None, use P(variables).
         """
-        # Get topological order using pgmpy's method (considers only directed edges)
+        # Get topological order of the causal graph and restrict to nodes in S
         topo_order = causal_graph.get_topological_order()
         topo_in_S = [v for v in topo_order if v in S]
 
