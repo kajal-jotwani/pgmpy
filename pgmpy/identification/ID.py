@@ -98,21 +98,6 @@ class ID(BaseFormulaIdentification):
             return ProbabilityExpressionTree(root=MarginalNode(prob, sumset=sumset))
         return ProbabilityExpressionTree(root=prob)
 
-    def _get_c_components(self, causal_graph):
-        """Return all C-components (districts) of the graph.
-
-        A C-component is a maximal set of variables connected by bidirected edges.
-        Uses get_district to find each unique district.
-        """
-        visited = set()
-        components = []
-        for node in causal_graph.nodes():
-            if node not in visited:
-                district = causal_graph.get_district(node)
-                components.append(frozenset(district))
-                visited.update(district)
-        return components
-
     def _identify_recursive(self, outcomes, exposures, variables, causal_graph, base_expr):
         """Recursive implementation of the ID algorithm (Lines 2-7).
 
@@ -166,7 +151,7 @@ class ID(BaseFormulaIdentification):
 
         # Lines 4-7: C-component based decomposition
         graph_minus_exposures = causal_graph.get_subgraph(variables - exposures, edge_types={"->", "<>"})
-        c_components = self._get_c_components(graph_minus_exposures)
+        c_components = graph_minus_exposures.get_district()
 
         # Line 4: Multiple C-components - decompose
         if len(c_components) > 1:
@@ -175,10 +160,10 @@ class ID(BaseFormulaIdentification):
             )
 
         # Single C-component in G\exposures
-        S = c_components[0] if c_components else frozenset()
+        S = next(iter(c_components)) if c_components else frozenset()
 
         # Line 5: Hedge detection
-        c_components_graph = self._get_c_components(causal_graph)
+        c_components_graph = causal_graph.get_district()
         if len(c_components_graph) == 1:
             self.hedge_ = (causal_graph, S)
             return False

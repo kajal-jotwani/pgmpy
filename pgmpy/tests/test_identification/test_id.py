@@ -62,23 +62,23 @@ class TestID:
         assert result.root.variables == {"X", "Y"}
 
     def test_get_c_components(self):
-        """Test _get_c_components() correctly identifies districts."""
+        """Test get_district() correctly identifies districts."""
         # Single C-component (all connected by bidirected edges)
         admg = ADMG(edge_list=[("X", "Y", "->"), ("X", "Y", "<>"), ("Y", "Z", "<>")])
-        components = ID()._get_c_components(admg)
+        components = admg.get_district()
         assert len(components) == 1
-        assert components[0] == frozenset({"X", "Y", "Z"})
+        assert frozenset({"X", "Y", "Z"}) in components
 
         # Multiple C-components
         admg = ADMG(edge_list=[("X", "Y", "->"), ("X", "Y", "<>"), ("Z", "W", "<>")])
-        components = ID()._get_c_components(admg)
+        components = admg.get_district()
         assert len(components) == 2
         assert frozenset({"X", "Y"}) in components
         assert frozenset({"Z", "W"}) in components
 
         # Isolated nodes (no bidirected edges)
         admg = ADMG(edge_list=[("X", "Y", "->")])
-        components = ID()._get_c_components(admg)
+        components = admg.get_district()
         assert len(components) == 2
         assert frozenset({"X"}) in components
         assert frozenset({"Y"}) in components
@@ -108,7 +108,7 @@ class TestID:
         """Test _decompose_by_c_components() decomposition logic."""
         admg = ADMG(edge_list=[("X", "Y", "->"), ("Z", "W", "->"), ("Z", "W", "<>")], exposures={"X"}, outcomes={"Y"})
         graph_minus_x = admg.get_subgraph(frozenset({"Y", "Z", "W"}), edge_types={"->", "<>"})
-        c_components = ID()._get_c_components(graph_minus_x)
+        c_components = graph_minus_x.get_district()
 
         result = ID()._decompose_by_c_components(
             frozenset({"Y"}), frozenset({"X"}), frozenset({"X", "Y", "Z", "W"}), admg, c_components, None
