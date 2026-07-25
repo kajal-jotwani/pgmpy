@@ -60,6 +60,18 @@ class ID(BaseFormulaIdentification):
         ProbabilityExpressionTree or False
             The identified formula, or False if not identifiable.
         """
+        # TODO: Remove this conversion once DAG inherits _CoreGraph. The ID
+        # algorithm is built on _CoreGraph methods (get_district, get_ancestral_graph,
+        # get_subgraph, do, ...) which DAG does not yet expose, so DAG inputs currently
+        # cannot run the algorithm directly. As a temporary workaround we convert the
+        # DAG to an equivalent ADMG (all directed edges, no bidirected edges) carrying
+        # over the node roles, and run the algorithm on that.
+        if isinstance(causal_graph, DAG):
+            causal_graph = ADMG(
+                edge_list=[(u, v, "->") for u, v in causal_graph.edges()],
+                roles=causal_graph.get_role_dict(),
+            )
+
         exposures = frozenset(causal_graph.get_role("exposures"))
         outcomes = frozenset(causal_graph.get_role("outcomes"))
         variables = frozenset(causal_graph.nodes())
