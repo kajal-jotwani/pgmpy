@@ -116,6 +116,7 @@ class BaseFormulaIdentification:
     >>> from pgmpy.identification.probability_expression import (
     ...     ProbabilityExpressionTree, ProbabilityNode
     ... )
+    >>> from pgmpy.base import DAG
     >>> class SimpleFormulaId(BaseFormulaIdentification):
     ...     supported_graph_types = (DAG,)
     ...     def _identify(self, causal_graph):
