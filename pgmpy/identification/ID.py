@@ -238,7 +238,7 @@ class ID(BaseFormulaIdentification):
                     return False
                 factors.append(factor)
             # k > 1 here, so there are always at least two factors.
-            return self._marginalize(factors[0], variables - (outcomes | exposures))
+            return self._marginalize(ProductNode(factors), variables - (outcomes | exposures))
 
         # C(G \ X) = {S}. S is bidirected-connected in G \ X and G \ X keeps every
         # bidirected edge of G between its nodes, so S is bidirected-connected in G
@@ -248,7 +248,7 @@ class ID(BaseFormulaIdentification):
 
         # Line 5: C(G) = {G}, i.e. the whole of G is that one C-component.
         if S_prime == variables:
-            self.hedge_ = causal_graph.get_subgraph(S, edge_types={"->", "<>"})
+            self.hedge_ = (causal_graph, causal_graph.get_subgraph(S))
             return False
 
         ordered = [node for node in ordering if node in variables]
