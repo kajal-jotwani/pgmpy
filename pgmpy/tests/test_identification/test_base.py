@@ -15,8 +15,7 @@ def cg():
 def admg_bowarc():
     """ADMG with a bow-arc (X->Z<->X, Z->Y). Standard identifiable structure."""
     return ADMG(
-        directed_ebunch=[("X", "Z"), ("Z", "Y")],
-        bidirected_ebunch=[("X", "Z")],
+        edge_list=[("X", "Z", "->"), ("Z", "Y", "->"), ("X", "Z", "<>")],
         roles={"exposures": "X", "outcomes": "Y"},
     )
 
@@ -24,18 +23,14 @@ def admg_bowarc():
 @pytest.fixture
 def admg_no_roles():
     """ADMG with no roles assigned — should fail validation."""
-    return ADMG(
-        directed_ebunch=[("X", "Z"), ("Z", "Y")],
-        bidirected_ebunch=[("X", "Z")],
-    )
+    return ADMG(edge_list=[("X", "Z", "->"), ("Z", "Y", "->"), ("X", "Z", "<>")])
 
 
 @pytest.fixture
 def admg_with_conditioning():
     """ADMG with exposures, outcomes, and a conditioning variable Z."""
     return ADMG(
-        directed_ebunch=[("X", "Z"), ("Z", "Y"), ("X", "Y")],
-        bidirected_ebunch=[("X", "Y")],
+        edge_list=[("X", "Z", "->"), ("Z", "Y", "->"), ("X", "Y", "->"), ("X", "Y", "<>")],
         roles={"exposures": "X", "outcomes": "Y", "conditioning": "Z"},
     )
 
