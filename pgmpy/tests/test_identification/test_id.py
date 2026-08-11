@@ -12,11 +12,10 @@ from pgmpy.identification.probability_expression import (
     ProductNode,
 )
 
-# Fig. 1 (a) of the paper: W1, W2 are afflictions of a pregnant mother and her
-# unborn child, X a toxin-lowering treatment, Y1, Y2 the survival of the two
-# patients. The bidirected arcs are reconstructed from the worked example on
-# p. 1224, which pins down every intermediate quantity the algorithm computes on
-# this graph (see ``test_figure_1a_matches_the_papers_worked_example``).
+# Fig. 1 (a) of the paper: W1, W2 are afflictions of a pregnant mother and her unborn child, X a toxin-lowering
+# treatment, Y1, Y2 the survival of the two patients. The bidirected arcs are reconstructed from the worked example on
+# p. 1224, which pins down every intermediate quantity the algorithm computes on this graph (see
+# ``test_figure_1a_matches_the_papers_worked_example``).
 FIGURE_1A = [
     ("W1", "X", "->"),
     ("X", "Y1", "->"),
@@ -26,9 +25,8 @@ FIGURE_1A = [
     ("W1", "Y2", "<>"),
 ]
 
-# Fig. 1 (b): the same graph with X pulled into the confounded component. The
-# paper describes the resulting hedge as "if e is the edge between W1 and X,
-# then F = G \ {e}, and F' = F \ {X}", which is only possible when a second,
+# Fig. 1 (b): the same graph with X pulled into the confounded component. The paper describes the resulting hedge as
+# "if e is the edge between W1 and X, then F = G \ {e}, and F' = F \ {X}", which is only possible when a second,
 # bidirected edge joins W1 and X.
 FIGURE_1B = FIGURE_1A + [("W1", "X", "<>")]
 
@@ -67,10 +65,7 @@ class TestIDPaperExamples:
                             \sum_{w_1} P(y_1 | x, w_1) P(w_1)
         """
         result = ID().identify(graph(FIGURE_1A, {"X"}, {"Y1", "Y2"}))
-        assert result.to_latex() == (
-            r"\sum_{W2} P(W2) P(Y2 \mid W2) "
-            r"\left[ \sum_{W1} P(W1) P(Y1 \mid W1, X) \right]"
-        )
+        assert result.to_latex() == r"\sum_{W2} P(W2) P(Y2 \mid W2) \left[ \sum_{W1} P(W1) P(Y1 \mid W1, X) \right]"
 
     def test_figure_1a_intermediate_quantities_match_the_paper(self):
         """The paper states G = An(Y), C(G \\ {X}) = {G \\ {X}} and W = {W1}."""
@@ -92,15 +87,14 @@ class TestIDPaperExamples:
         }
 
     def test_figure_1b_is_not_identifiable(self):
-        """ "The very same effect in a very similar graph is not identifiable
-        due to the presence of C-forests forming a hedge" (p. 1224)."""
+        """ "The very same effect in a very similar graph is not identifiable due to the presence of C-forests forming
+        a hedge" (p. 1224)."""
         algorithm = ID()
         assert algorithm.identify(graph(FIGURE_1B, {"X"}, {"Y1", "Y2"})) is False
 
-        # Theorem 6: the pair thrown by line 5 witnesses a hedge for P_x'(y')
-        # for some X' ⊆ X, Y' ⊆ Y -- so it is the graph local to the failing
-        # call, not the whole of G. Here lines 3 and 2 have already narrowed the
-        # problem to P_{w1,x}(y1) on An(Y1) before the hedge is found.
+        # Theorem 6: the pair thrown by line 5 witnesses a hedge for P_x'(y') for some X' ⊆ X, Y' ⊆ Y -- so it is the
+        # graph local to the failing call, not the whole of G. Here lines 3 and 2 have already narrowed the problem to
+        # P_{w1,x}(y1) on An(Y1) before the hedge is found.
         forest, subforest = algorithm.hedge_
         assert set(forest.nodes()) == {"W1", "X", "Y1"}
         assert sorted(forest.get_edges(data=True)) == [
@@ -109,8 +103,8 @@ class TestIDPaperExamples:
             ("W1", "Y1", "<>"),
             ("X", "Y1", "->"),
         ]
-        # F is a single C-component rooted at Y1, and dropping the directed
-        # W1 -> X edge leaves the C-forest the paper describes.
+        # F is a single C-component rooted at Y1, and dropping the directed W1 -> X edge leaves the C-forest the paper
+        # describes.
         assert forest.get_district() == {frozenset({"W1", "X", "Y1"})}
         assert set(subforest.nodes()) == {"Y1"}
 
@@ -122,8 +116,8 @@ class TestIDPaperExamples:
         forest, subforest = algorithm.hedge_
         assert set(forest.nodes()) == {"X", "Y"}
         assert sorted(forest.get_edges(data=True)) == [("X", "Y", "->"), ("X", "Y", "<>")]
-        # F' is the root of the C-tree, exactly as the paper notes for C-trees:
-        # "F is the C-tree itself, and F' is the singleton root Y".
+        # F' is the root of the C-tree, exactly as the paper notes for C-trees: "F is the C-tree itself, and F' is the
+        # singleton root Y".
         assert set(subforest.nodes()) == {"Y"}
 
 
@@ -143,17 +137,15 @@ class TestIDIdentifiableFormulas:
     def test_front_door(self):
         r"""P_x(y) = \sum_m P(m|x) \sum_{x'} P(x') P(y|m,x').
 
-        The inner ``\sum_{X}`` is produced by line 7 of the algorithm. An
-        implementation that never reaches line 7 returns the shorter -- and
-        wrong -- ``\sum_{M} P(M|X) P(Y|M,X)``, which has the same tree shape.
+        The inner ``\sum_{X}`` is produced by line 7 of the algorithm. An implementation that never reaches line 7
+        returns the shorter -- and wrong -- ``\sum_{M} P(M|X) P(Y|M,X)``, which has the same tree shape.
         """
         result = ID().identify(graph(FRONT_DOOR, {"X"}, {"Y"}))
         assert result.to_latex() == (r"\sum_{M} P(M \mid X) \left[ \sum_{X} P(X) P(Y \mid M, X) \right]")
 
     def test_napkin(self):
-        """The napkin graph. Its estimand is a ratio, which only appears if
-        lines 6 and 7 factorise the estimand carried into the call rather than
-        the original observational joint."""
+        """The napkin graph. Its estimand is a ratio, which only appears if lines 6 and 7 factorise the estimand
+        carried into the call rather than the original observational joint."""
         result = ID().identify(graph(NAPKIN, {"X"}, {"Y"}))
         assert result.to_latex() == (
             r"\frac{\sum_{W} P(W) P(X \mid W, Z) P(Y \mid W, X, Z)}"
@@ -162,14 +154,14 @@ class TestIDIdentifiableFormulas:
         assert DivisionNode in result.collect_node_types()
 
     def test_mediator_confounded_with_outcome(self):
-        """X -> M -> Y with M <> Y. {M, Y} is a C-component of G, so line 6
-        returns the chain factorisation directly."""
+        """X -> M -> Y with M <> Y. {M, Y} is a C-component of G, so line 6 returns the chain factorisation
+        directly."""
         result = ID().identify(graph(FRONT_DOOR[:2] + [("M", "Y", "<>")], {"X"}, {"Y"}))
         assert result.to_latex() == r"\sum_{M} P(M \mid X) P(Y \mid M, X)"
 
     def test_descendants_of_the_outcome_are_dropped(self):
-        """Line 2 restricts the problem to An(Y), so the extra descendant D
-        leaves the front-door formula unchanged."""
+        """Line 2 restricts the problem to An(Y), so the extra descendant D leaves the front-door formula
+        unchanged."""
         result = ID().identify(graph(FRONT_DOOR + [("Y", "D", "->")], {"X"}, {"Y"}))
         assert result.to_latex() == (r"\sum_{M} P(M \mid X) \left[ \sum_{X} P(X) P(Y \mid M, X) \right]")
 
@@ -219,9 +211,8 @@ class TestIDNonIdentifiable:
         assert not (set(subforest.nodes()) & exposures)
 
     def test_failure_propagates_out_of_the_line_4_decomposition(self):
-        """In the extended bow arc, line 4 splits G \\ X into {Z} and {Y}. Only
-        the {Z} subproblem hedges, and that FAIL must abort the whole product
-        rather than being swallowed."""
+        """In the extended bow arc, line 4 splits G \\ X into {Z} and {Y}. Only the {Z} subproblem hedges, and that
+        FAIL must abort the whole product rather than being swallowed."""
         algorithm = ID()
         assert algorithm.identify(graph(EXTENDED_BOW_ARC, {"X"}, {"Y"})) is False
         forest, subforest = algorithm.hedge_
@@ -244,8 +235,8 @@ class TestIDInputHandling:
         assert result.to_latex() == r"\sum_{M} P(M \mid X) P(Y \mid M, X)"
 
     def test_dag_input_keeps_isolated_nodes(self):
-        """Converting a DAG through its edge list alone silently drops nodes
-        that have no edges; an isolated outcome would then raise."""
+        """Converting a DAG through its edge list alone silently drops nodes that have no edges; an isolated outcome
+        would then raise."""
         dag = DAG(ebunch=[("A", "B")])
         dag.add_node("Y")
         dag = dag.with_role("exposures", ["A"]).with_role("outcomes", ["Y"])
@@ -275,9 +266,8 @@ class TestIDHelpers:
         assert ID()._marginalize(node, frozenset()) is node
 
     def test_marginalize_shrinks_a_plain_joint(self):
-        """Σ_X P(X, Y) is P(Y), not a MarginalNode wrapping P(X, Y). Keeping the
-        estimand a plain joint is what lets _district_product emit atomic
-        conditionals instead of ratios further down the recursion."""
+        """Σ_X P(X, Y) is P(Y), not a MarginalNode wrapping P(X, Y). Keeping the estimand a plain joint is what lets
+        _district_product emit atomic conditionals instead of ratios further down the recursion."""
         result = ID()._marginalize(ProbabilityNode(frozenset({"X", "Y"})), {"X"})
         assert result == ProbabilityNode(frozenset({"Y"}))
 
@@ -293,8 +283,8 @@ class TestIDHelpers:
         assert result.children[0] == inner.children[0]
 
     def test_district_product_of_a_singleton_district(self):
-        """ProductNode rejects a single factor, but a district may well be a
-        singleton -- the lone factor is then its own product."""
+        """ProductNode rejects a single factor, but a district may well be a singleton -- the lone factor is then its
+        own product."""
         result = ID()._district_product(
             estimand=ProbabilityNode(frozenset({"X", "Y"})),
             district=frozenset({"Y"}),
@@ -303,8 +293,8 @@ class TestIDHelpers:
         assert result == ProbabilityNode(frozenset({"Y"}), cond=frozenset({"X"}))
 
     def test_district_product_of_a_plain_joint_is_atomic(self):
-        """With the original P(v) still carried, the chain-rule conditionals are
-        atomic terms and no division is needed."""
+        """With the original P(v) still carried, the chain-rule conditionals are atomic terms and no division is
+        needed."""
         result = ID()._district_product(
             estimand=ProbabilityNode(frozenset({"X", "M", "Y"})),
             district=frozenset({"X", "Y"}),
@@ -318,8 +308,8 @@ class TestIDHelpers:
         )
 
     def test_district_product_of_a_derived_estimand_divides(self):
-        """Once line 7 has replaced P by Q[S'], a conditional of it can only be
-        expressed as a ratio of two marginals of that Q[S']."""
+        """Once line 7 has replaced P by Q[S'], a conditional of it can only be expressed as a ratio of two marginals
+        of that Q[S']."""
         estimand = MarginalNode(ProbabilityNode(frozenset({"X", "Y"})), sumset=frozenset({"Z"}))
         result = ID()._district_product(estimand=estimand, district=frozenset({"Y"}), ordered=["X", "Y"])
         assert isinstance(result, DivisionNode)

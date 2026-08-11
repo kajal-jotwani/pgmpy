@@ -5,10 +5,10 @@ from .frontdoor import Frontdoor
 from .probability_expression import ProbabilityExpressionTree
 
 __all__ = [
-	"BaseGraphicalIdentification",
-	"BaseFormulaIdentification",
-	"ID",
-	"Adjustment",
-	"Frontdoor",
-	"ProbabilityExpressionTree",
+    "BaseGraphicalIdentification",
+    "BaseFormulaIdentification",
+    "ID",
+    "Adjustment",
+    "Frontdoor",
+    "ProbabilityExpressionTree",
 ]

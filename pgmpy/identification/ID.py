@@ -13,28 +13,24 @@ class ID(BaseFormulaIdentification):
     """
     Given a causal graph, identifies the causal effect using the ID algorithm.
 
-    The class implements the recursive identification procedure of
-    :footcite:t:`shpitser_2006` for ADMGs with exposure and outcome roles.
-    When the effect is identifiable, it returns a symbolic probability
-    expression for the interventional distribution. When the effect is not
-    identifiable, it returns ``False`` and stores the witness hedge in
-    ``self.hedge_``.
+    The class implements the recursive identification procedure of :footcite:t:`shpitser_2006` for ADMGs and DAGs with
+    exposure and outcome roles. When the effect is identifiable, it returns a symbolic probability expression for the
+    interventional distribution. When the effect is not identifiable, it returns ``False`` and stores the witness hedge
+    in ``self.hedge_``.
 
     Parameters
     ----------
-    causal_graph : ADMG
-        An ADMG with exposures and outcomes roles assigned. The two roles must
-        be disjoint.
+    causal_graph : ADMG, DAG
+        An ADMG or DAG with exposures and outcomes roles assigned. The two roles must be disjoint.
 
     Returns
     -------
     ProbabilityExpressionTree
         The symbolic formula for P(Y|do(X)) when identifiable.
     False
-        When the effect is not identifiable. The witness hedge is stored in
-        ``self.hedge_`` as the pair of graphs ``(G, G_S)`` thrown by line 5 of
-        the algorithm; the C-forests forming the hedge are edge subgraphs of
-        that pair (Theorem 6 of the paper).
+        When the effect is not identifiable. The witness hedge is stored in ``self.hedge_`` as the pair of graphs
+        ``(G, G_S)`` thrown by line 5 of the algorithm; the C-forests forming the hedge are edge subgraphs of that pair
+        (Theorem 6 of the paper).
 
     Examples
     --------
@@ -82,14 +78,13 @@ class ID(BaseFormulaIdentification):
         if overlap := (exposures & outcomes):
             raise ValueError(f"'exposures' and 'outcomes' must be disjoint, but {sorted(overlap)} is in both.")
 
-        # π, a single topological ordering fixed over the ORIGINAL graph and threaded
-        # unchanged through every recursive call. Every graph the recursion constructs
-        # is an induced subgraph of G, and restricting a topological order to a subset
-        # of nodes is still a topological order of the induced subgraph.
+        # π, a single topological ordering fixed over the ORIGINAL graph and threaded unchanged through every recursive
+        # call. Every graph the recursion constructs is an induced subgraph of G, and restricting a topological order
+        # to a subset of nodes is still a topological order of the induced subgraph.
         ordering = causal_graph.get_topological_order()
 
-        # P, the estimand. Starts as the observational joint P(v) and is rewritten
-        # by lines 2 and 7 as the recursion proceeds.
+        # P, the estimand. Starts as the observational joint P(v) and is rewritten by lines 2 and 7 as the recursion
+        # proceeds.
         estimand = ProbabilityNode(variables)
 
         result = self._identify_recursive(outcomes, exposures, variables, causal_graph, estimand, ordering)
@@ -100,13 +95,11 @@ class ID(BaseFormulaIdentification):
     def _marginalize(self, node, sumset):
         r"""Return :math:`\sum_{sumset} node`.
 
-        Three exact simplifications keep the expression readable: an empty
-        ``sumset`` is the identity, summing variables out of a plain joint
-        ``P(A)`` gives the smaller joint ``P(A \ sumset)``, and nested sums
-        collapse into one. The second is not merely cosmetic -- it is what keeps
-        the estimand a plain joint for as long as the algorithm has not genuinely
-        left it, which in turn lets ``_district_product`` emit atomic
-        conditionals instead of ratios.
+        Three exact simplifications keep the expression readable: an empty ``sumset`` is the identity, summing
+        variables out of a plain joint ``P(A)`` gives the smaller joint ``P(A \ sumset)``, and nested sums collapse
+        into one. The second is not merely cosmetic -- it is what keeps the estimand a plain joint for as long as the
+        algorithm has not genuinely left it, which in turn lets ``_district_product`` emit atomic conditionals instead
+        of ratios.
         """
         sumset = frozenset(sumset)
         if not sumset:
@@ -120,28 +113,23 @@ class ID(BaseFormulaIdentification):
     def _district_product(self, estimand, district, ordered):
         r"""Return :math:`\prod_{V_i \in district} P(v_i \mid v_\pi^{(i-1)})`.
 
-        This is the product shared by lines 6 and 7 of the paper. What the
-        paper's notation hides is that ``P`` here is *the estimand carried into
-        the current call*, not the original observational joint: line 7 replaces
-        ``P`` by ``Q[S']`` before recursing, so a line 6 (or a further line 7)
-        reached below it must factorise that ``Q[S']`` instead. A conditional of
-        an arbitrary estimand is recovered by marginalisation and division,
+        This is the product shared by lines 6 and 7 of the paper. What the paper's notation hides is that ``P`` here is
+        *the estimand carried into the current call*, not the original observational joint: line 7 replaces ``P`` by
+        ``Q[S']`` before recursing, so a line 6 (or a further line 7) reached below it must factorise that ``Q[S']``
+        instead. A conditional of an arbitrary estimand is recovered by marginalisation and division,
 
         .. math::
 
             P(v_i \mid v_\pi^{(i-1)}) =
                 \frac{\sum_{v_{i+1}, \ldots, v_n} P}{\sum_{v_i, \ldots, v_n} P}
 
-        which is where the division in e.g. the napkin graph comes from. When
-        the estimand is still a plain joint both sums collapse to plain joints
-        and the ratio :math:`P(A) / P(A \setminus \{V_i\})` is written back as
-        the atomic term :math:`P(v_i \mid a \setminus \{v_i\})`.
+        which is where the division in e.g. the napkin graph comes from. When the estimand is still a plain joint both
+        sums collapse to plain joints and the ratio :math:`P(A) / P(A \setminus \{V_i\})` is written back as the atomic
+        term :math:`P(v_i \mid a \setminus \{v_i\})`.
 
-        Line 7 writes the factor as ``P(V_i | V_π^{(i-1)} ∩ S', v_π^{(i-1)} \ S')``,
-        distinguishing preceding variables inside ``S'`` from those outside it
-        that are held at a fixed value. Both sit behind the conditioning bar, so
-        as a probability expression this is the same product as line 6's, only
-        ranging over ``S'`` instead of ``S``.
+        Line 7 writes the factor as ``P(V_i | V_π^{(i-1)} ∩ S', v_π^{(i-1)} \ S')``, distinguishing preceding variables
+        inside ``S'`` from those outside it that are held at a fixed value. Both sit behind the conditioning bar, so as
+        a probability expression this is the same product as line 6's, only ranging over ``S'`` instead of ``S``.
 
         Parameters
         ----------
@@ -150,8 +138,7 @@ class ID(BaseFormulaIdentification):
         district : frozenset
             The C-component to factorise: ``S`` on line 6, ``S'`` on line 7.
         ordered : list
-            The current variable set ``V`` in topological order, i.e. ``π``
-            restricted to this subproblem.
+            The current variable set ``V`` in topological order, i.e. ``π`` restricted to this subproblem.
         """
         factors = []
         for i, v_i in enumerate(ordered):
@@ -183,13 +170,12 @@ class ID(BaseFormulaIdentification):
         exposures : frozenset
             ``x``, the variables being intervened on.
         variables : frozenset
-            ``V``, all variables of the current subproblem. Always equal to the
-            node set of ``causal_graph``.
+            ``V``, all variables of the current subproblem. Always equal to the node set of ``causal_graph``.
         causal_graph : ADMG
             ``G``, the current graph; an induced subgraph of the original.
         estimand : _TreeNode
-            ``P``, the carried probability expression. Begins as ``P(v)`` and is
-            marginalised (line 2) or replaced by ``Q[S']`` (line 7).
+            ``P``, the carried probability expression. Begins as ``P(v)`` and is marginalised (line 2) or replaced by
+            ``Q[S']`` (line 7).
         ordering : list
             ``π``, the topological ordering fixed over the original graph.
 
@@ -240,9 +226,8 @@ class ID(BaseFormulaIdentification):
             # k > 1 here, so there are always at least two factors.
             return self._marginalize(ProductNode(factors), variables - (outcomes | exposures))
 
-        # C(G \ X) = {S}. S is bidirected-connected in G \ X and G \ X keeps every
-        # bidirected edge of G between its nodes, so S is bidirected-connected in G
-        # too and therefore lies inside exactly one C-component of G.
+        # C(G \ X) = {S}. S is bidirected-connected in G \ X and G \ X keeps every bidirected edge of G between its
+        # nodes, so S is bidirected-connected in G too and therefore lies inside exactly one C-component of G.
         S = c_components[0]
         S_prime = frozenset(causal_graph.get_district(next(iter(S))))
 
