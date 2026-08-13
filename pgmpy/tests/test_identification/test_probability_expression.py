@@ -103,15 +103,15 @@ class TestTreeNodeAbstract:
 
 
 class TestMarginalize:
-    """Σ over an expression, and the exact simplifications each node type applies."""
+    """Summing over an expression, and the exact simplifications each node type applies."""
 
     def test_marginalize_over_nothing_is_the_identity(self):
         node = ProbabilityNode(frozenset({"X", "Y"}))
         assert node.marginalize(frozenset()) is node
 
     def test_marginalize_shrinks_a_plain_joint(self):
-        """Σ_X P(X, Y) is P(Y), not a MarginalNode wrapping P(X, Y). This keeps an estimand a plain joint for as long
-        as it genuinely is one, which is what lets the ID algorithm emit atomic conditionals instead of ratios."""
+        """sum_X P(X, Y) is P(Y), not a MarginalNode wrapping P(X, Y). This keeps an estimand a plain joint for as
+        long as it genuinely is one, which is what lets the ID algorithm emit atomic conditionals instead of ratios."""
         assert ProbabilityNode(frozenset({"X", "Y"})).marginalize({"X"}) == ProbabilityNode(frozenset({"Y"}))
 
     def test_marginalize_does_not_shrink_a_conditional(self):

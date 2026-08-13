@@ -75,11 +75,11 @@ class TestIDPaperExamples:
         assert admg.get_ancestors({"Y1", "Y2"}) == variables
         assert admg.get_subgraph(variables - {"X"}).get_district() == {frozenset(variables - {"X"})}
 
-        # W = (V \ X) \ An(Y)_{G_x̄}
+        # W = (V \ X) \ An(Y) in G with the incoming edges of X removed.
         ancestors_after_do = admg.do({"X"}).get_ancestors({"Y1", "Y2"})
         assert (variables - {"X"}) - ancestors_after_do == {"W1"}
 
-        # ... and after line 3 the graph splits into three C-components.
+        # ... and after Step 3 the graph splits into three C-components.
         assert admg.get_subgraph(variables - {"X", "W1"}).get_district() == {
             frozenset({"Y1"}),
             frozenset({"W2"}),
@@ -92,8 +92,8 @@ class TestIDPaperExamples:
         algorithm = ID()
         assert algorithm.identify(graph(FIGURE_1B, {"X"}, {"Y1", "Y2"})) is False
 
-        # Theorem 6: the pair thrown by line 5 witnesses a hedge for P_x'(y') for some X' ⊆ X, Y' ⊆ Y -- so it is the
-        # graph local to the failing call, not the whole of G. Here lines 3 and 2 have already narrowed the problem to
+        # Theorem 6: the pair thrown by Step 5 witnesses a hedge for P_x'(y') for some X' in X, Y' in Y, so it is
+        # the graph local to the failing call, not the whole of G. Here Steps 3 and 2 have already narrowed it to
         # P_{w1,x}(y1) on An(Y1) before the hedge is found.
         forest, subforest = algorithm.hedge_
         assert set(forest.nodes()) == {"W1", "X", "Y1"}
@@ -125,26 +125,26 @@ class TestIDIdentifiableFormulas:
     """Identifiable effects, asserted against their exact closed-form expression."""
 
     def test_chain(self):
-        """X -> M -> Y is Markovian: P_x(y) = Σ_m P(m|x) P(y|m,x)."""
+        """X -> M -> Y is Markovian: P_x(y) = sum_m P(m|x) P(y|m,x)."""
         result = ID().identify(graph(CHAIN, {"X"}, {"Y"}))
         assert result.to_latex() == r"\sum_{M} P(M \mid X) P(Y \mid M, X)"
 
     def test_back_door(self):
-        """Z confounds X and Y: P_x(y) = Σ_z P(z) P(y|x,z)."""
+        """Z confounds X and Y: P_x(y) = sum_z P(z) P(y|x,z)."""
         result = ID().identify(graph(BACK_DOOR, {"X"}, {"Y"}))
         assert result.to_latex() == r"\sum_{Z} P(Z) P(Y \mid X, Z)"
 
     def test_front_door(self):
         r"""P_x(y) = \sum_m P(m|x) \sum_{x'} P(x') P(y|m,x').
 
-        The inner ``\sum_{X}`` is produced by line 7 of the algorithm. An implementation that never reaches line 7
+        The inner ``\sum_{X}`` is produced by Step 7 of the algorithm. An implementation that never reaches Step 7
         returns the shorter -- and wrong -- ``\sum_{M} P(M|X) P(Y|M,X)``, which has the same tree shape.
         """
         result = ID().identify(graph(FRONT_DOOR, {"X"}, {"Y"}))
         assert result.to_latex() == (r"\sum_{M} P(M \mid X) \left[ \sum_{X} P(X) P(Y \mid M, X) \right]")
 
     def test_napkin(self):
-        """The napkin graph. Its estimand is a ratio, which only appears if lines 6 and 7 factorise the estimand
+        """The napkin graph. Its estimand is a ratio, which only appears if Steps 6 and 7 factorise the estimand
         carried into the call rather than the original observational joint."""
         result = ID().identify(graph(NAPKIN, {"X"}, {"Y"}))
         assert result.to_latex() == (
@@ -154,13 +154,13 @@ class TestIDIdentifiableFormulas:
         assert DivisionNode in result.collect_node_types()
 
     def test_mediator_confounded_with_outcome(self):
-        """X -> M -> Y with M <> Y. {M, Y} is a C-component of G, so line 6 returns the chain factorisation
+        """X -> M -> Y with M <> Y. {M, Y} is a C-component of G, so Step 6 returns the chain factorisation
         directly."""
         result = ID().identify(graph(FRONT_DOOR[:2] + [("M", "Y", "<>")], {"X"}, {"Y"}))
         assert result.to_latex() == r"\sum_{M} P(M \mid X) P(Y \mid M, X)"
 
     def test_descendants_of_the_outcome_are_dropped(self):
-        """Line 2 restricts the problem to An(Y), so the extra descendant D leaves the front-door formula
+        """Step 2 restricts the problem to An(Y), so the extra descendant D leaves the front-door formula
         unchanged."""
         result = ID().identify(graph(FRONT_DOOR + [("Y", "D", "->")], {"X"}, {"Y"}))
         assert result.to_latex() == (r"\sum_{M} P(M \mid X) \left[ \sum_{X} P(X) P(Y \mid M, X) \right]")
@@ -175,7 +175,7 @@ class TestIDIdentifiableFormulas:
         assert result.to_latex() == r"P(Y1 \mid X) P(Y2 \mid X)"
 
     def test_no_intervention_reduces_to_marginalisation(self):
-        """Line 1: with x = ∅ the effect is Σ_{v\\y} P(v)."""
+        """Step 1: with an empty x the effect is sum_{v \\ y} P(v)."""
         admg = ADMG(edge_list=CHAIN, exposures={"X"}, outcomes={"Y"})
         result = ID()._identify_recursive(
             outcomes=frozenset({"Y"}),
@@ -205,13 +205,13 @@ class TestIDNonIdentifiable:
         assert algorithm.identify(graph(edge_list, exposures, outcomes)) is False
 
         forest, subforest = algorithm.hedge_
-        # Definition 6: F' ⊆ F, F ∩ X ≠ ∅ and F' ∩ X = ∅.
+        # Definition 6: F' is a subset of F, F meets X, and F' does not.
         assert set(subforest.nodes()) < set(forest.nodes())
         assert set(forest.nodes()) & exposures
         assert not (set(subforest.nodes()) & exposures)
 
-    def test_failure_propagates_out_of_the_line_4_decomposition(self):
-        """In the extended bow arc, line 4 splits G \\ X into {Z} and {Y}. Only the {Z} subproblem hedges, and that
+    def test_failure_propagates_out_of_the_step_4_decomposition(self):
+        """In the extended bow arc, Step 4 splits G \\ X into {Z} and {Y}. Only the {Z} subproblem hedges, and that
         FAIL must abort the whole product rather than being swallowed."""
         algorithm = ID()
         assert algorithm.identify(graph(EXTENDED_BOW_ARC, {"X"}, {"Y"})) is False
@@ -244,7 +244,7 @@ class TestIDInputHandling:
         assert result.to_latex() == r"P(Y)"
 
     def test_exposures_and_outcomes_must_be_disjoint(self):
-        """Definition 2 defines P_x(Y) only for Y ∩ X = ∅."""
+        """Definition 2 defines P_x(Y) only when X and Y are disjoint."""
         with pytest.raises(ValueError, match="disjoint"):
             ID().identify(graph(CHAIN, {"X", "Y"}, {"Y"}))
 
@@ -259,7 +259,7 @@ class TestIDInputHandling:
 
 
 class TestIDHelpers:
-    """The rules that lines 1-7 lean on, tested directly."""
+    """The rules that Steps 1-7 lean on, tested directly."""
 
     def test_district_product_of_a_singleton_district(self):
         """ProductNode rejects a single factor, but a district may well be a singleton -- the lone factor is then its
@@ -287,7 +287,7 @@ class TestIDHelpers:
         )
 
     def test_district_product_of_a_derived_estimand_divides(self):
-        """Once line 7 has replaced P by Q[S'], a conditional of it can only be expressed as a ratio of two marginals
+        """Once Step 7 has replaced P by Q[S'], a conditional of it can only be expressed as a ratio of two marginals
         of that Q[S']."""
         estimand = MarginalNode(ProbabilityNode(frozenset({"X", "Y"})), sumset=frozenset({"Z"}))
         result = ID()._district_product(estimand=estimand, district=frozenset({"Y"}), ordered=["X", "Y"])

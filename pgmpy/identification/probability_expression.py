@@ -22,18 +22,18 @@ class _TreeNode:
     def marginalize(self, sumset):
         r"""Return :math:`\sum_{sumset} self`.
 
-        Nodes are immutable, so this returns a new expression and leaves ``self`` untouched. Summing over nothing is
-        the identity, and a node whose sum is exactly expressible as a smaller node returns that instead of a wrapping
-        ``MarginalNode``: a plain joint ``P(A)`` shrinks to ``P(A \ sumset)``, and nested sums collapse into one.
+        Returns a new expression; nodes are immutable. Summing over nothing is the identity, and a sum that is exactly
+        a smaller node is returned as one rather than wrapped: a plain joint ``P(A)`` shrinks to ``P(A \ sumset)``, and
+        nested sums collapse into one.
 
         Parameters
         ----------
-        sumset : iterable of hashable
-            The variables being summed out.
+        sumset: iterable of hashable
+            The variables being summed out. Assumed to be a subset of the variables this expression ranges over.
 
         Returns
         -------
-        _TreeNode
+        expression: _TreeNode
             The marginalised expression.
 
         Examples
@@ -129,10 +129,10 @@ class ProbabilityNode(_TreeNode):
         self.children = []
 
     def _marginalize(self, sumset):
-        r"""Return the smaller joint :math:`P(A \setminus sumset)` when this term is a plain joint :math:`P(A)`.
+        r"""Shrink a plain joint :math:`P(A)` to :math:`P(A \setminus sumset)`.
 
-        Only a plain joint simplifies this way: summing a variable out of a conditional or interventional term
-        leaves a sum that cannot be written as a single atomic term.
+        Only a plain joint simplifies this way; summing out of a conditional or interventional term cannot be written
+        as a single atomic term.
         """
         if self.do or self.cond:
             return super()._marginalize(sumset)
@@ -143,7 +143,7 @@ class ProbabilityNode(_TreeNode):
         Return LaTeX for this atomic probability term.
 
         The conditioning bar is omitted when both ``do`` and ``cond`` are empty.
-        ``do(·)`` is always rendered before passive conditioning.
+        ``do(...)`` is always rendered before passive conditioning.
 
         Returns
         -------
@@ -236,12 +236,7 @@ class MarginalNode(_TreeNode):
         self.children = [child]
 
     def _marginalize(self, sumset):
-        r"""Collapse nested sums into one.
-
-        .. math::
-
-            \sum_{sumset} \sum_{self.sumset} child = \sum_{sumset \,\cup\, self.sumset} child
-        """
+        """Collapse nested sums into a single sum over the union of the two sumsets."""
         return MarginalNode(self.children[0], sumset=self.sumset | sumset)
 
     def to_latex(self):
