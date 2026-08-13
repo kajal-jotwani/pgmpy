@@ -229,17 +229,17 @@ class TestIDNonIdentifiable:
 
 class TestIDInputHandling:
     def test_dag_input(self):
-        dag = DAG(ebunch=[("X", "M"), ("M", "Y")])
-        dag = dag.with_role("exposures", ["X"]).with_role("outcomes", ["Y"])
+        dag = DAG(ebunch=[("X", "M"), ("M", "Y")], exposures={"X"}, outcomes={"Y"})
         result = ID().identify(dag)
         assert result.to_latex() == r"\sum_{M} P(M \mid X) P(Y \mid M, X)"
 
     def test_dag_input_keeps_isolated_nodes(self):
         """Converting a DAG through its edge list alone silently drops nodes that have no edges; an isolated outcome
         would then raise."""
-        dag = DAG(ebunch=[("A", "B")])
+        dag = DAG(ebunch=[("A", "B")], exposures={"A"})
+        # The outcome role can only be assigned once the isolated node exists.
         dag.add_node("Y")
-        dag = dag.with_role("exposures", ["A"]).with_role("outcomes", ["Y"])
+        dag = dag.with_role("outcomes", ["Y"])
         result = ID().identify(dag)
         assert result.to_latex() == r"P(Y)"
 
