@@ -19,6 +19,41 @@ class _TreeNode:
         """Sort and join variable names for deterministic LaTeX output."""
         return ", ".join(sorted((str(v) for v in var_set), key=str))
 
+    def marginalize(self, sumset):
+        r"""Return :math:`\sum_{sumset} self`.
+
+        Nodes are immutable, so this returns a new expression and leaves ``self`` untouched. Summing over nothing is
+        the identity, and a node whose sum is exactly expressible as a smaller node returns that instead of a wrapping
+        ``MarginalNode``: a plain joint ``P(A)`` shrinks to ``P(A \ sumset)``, and nested sums collapse into one.
+
+        Parameters
+        ----------
+        sumset : iterable of hashable
+            The variables being summed out.
+
+        Returns
+        -------
+        _TreeNode
+            The marginalised expression.
+
+        Examples
+        --------
+        >>> from pgmpy.identification.probability_expression import ProbabilityNode
+        >>> ProbabilityNode(frozenset({"X"}), cond=frozenset({"Z"})).marginalize({"X"}).to_latex()
+        '\\sum_{X} P(X \\mid Z)'
+        """
+        sumset = frozenset(sumset)
+        if not sumset:
+            return self
+        return self._marginalize(sumset)
+
+    def _marginalize(self, sumset):
+        """Build the marginal of this node over a guaranteed non-empty ``sumset``.
+
+        The general case wraps the node in a sum; subclasses override this to simplify instead.
+        """
+        return MarginalNode(self, sumset=sumset)
+
     def to_latex(self):
         """Return a LaTeX string representation of this node.
 
@@ -92,6 +127,16 @@ class ProbabilityNode(_TreeNode):
         self.do = frozenset(do)
         self.cond = frozenset(cond)
         self.children = []
+
+    def _marginalize(self, sumset):
+        r"""Return the smaller joint :math:`P(A \setminus sumset)` when this term is a plain joint :math:`P(A)`.
+
+        Only a plain joint simplifies this way: summing a variable out of a conditional or interventional term
+        leaves a sum that cannot be written as a single atomic term.
+        """
+        if self.do or self.cond:
+            return super()._marginalize(sumset)
+        return ProbabilityNode(self.variables - sumset)
 
     def to_latex(self):
         r"""
@@ -189,6 +234,15 @@ class MarginalNode(_TreeNode):
         if not self.sumset:
             raise ValueError("MarginalNode requires at least one variable to sum over.")
         self.children = [child]
+
+    def _marginalize(self, sumset):
+        r"""Collapse nested sums into one.
+
+        .. math::
+
+            \sum_{sumset} \sum_{self.sumset} child = \sum_{sumset \,\cup\, self.sumset} child
+        """
+        return MarginalNode(self.children[0], sumset=self.sumset | sumset)
 
     def to_latex(self):
         r"""

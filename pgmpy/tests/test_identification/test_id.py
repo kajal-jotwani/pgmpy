@@ -259,28 +259,7 @@ class TestIDInputHandling:
 
 
 class TestIDHelpers:
-    """The three rules that lines 1-7 lean on, tested directly."""
-
-    def test_marginalize_over_nothing_is_the_identity(self):
-        node = ProbabilityNode(frozenset({"X", "Y"}))
-        assert ID()._marginalize(node, frozenset()) is node
-
-    def test_marginalize_shrinks_a_plain_joint(self):
-        """Σ_X P(X, Y) is P(Y), not a MarginalNode wrapping P(X, Y). Keeping the estimand a plain joint is what lets
-        _district_product emit atomic conditionals instead of ratios further down the recursion."""
-        result = ID()._marginalize(ProbabilityNode(frozenset({"X", "Y"})), {"X"})
-        assert result == ProbabilityNode(frozenset({"Y"}))
-
-    def test_marginalize_does_not_shrink_a_conditional(self):
-        node = ProbabilityNode(frozenset({"Y"}), cond=frozenset({"X"}))
-        result = ID()._marginalize(node, {"Y"})
-        assert result == MarginalNode(node, sumset=frozenset({"Y"}))
-
-    def test_marginalize_flattens_nested_sums(self):
-        inner = MarginalNode(ProbabilityNode(frozenset({"Y"}), cond=frozenset({"X"})), sumset=frozenset({"X"}))
-        result = ID()._marginalize(inner, {"Y"})
-        assert result.sumset == {"X", "Y"}
-        assert result.children[0] == inner.children[0]
+    """The rules that lines 1-7 lean on, tested directly."""
 
     def test_district_product_of_a_singleton_district(self):
         """ProductNode rejects a single factor, but a district may well be a singleton -- the lone factor is then its

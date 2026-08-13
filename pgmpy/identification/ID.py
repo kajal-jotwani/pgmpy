@@ -2,7 +2,6 @@ from pgmpy.base import ADMG, DAG
 from pgmpy.identification import BaseFormulaIdentification
 from pgmpy.identification.probability_expression import (
     DivisionNode,
-    MarginalNode,
     ProbabilityExpressionTree,
     ProbabilityNode,
     ProductNode,
@@ -92,24 +91,6 @@ class ID(BaseFormulaIdentification):
             return False
         return ProbabilityExpressionTree(root=result)
 
-    def _marginalize(self, node, sumset):
-        r"""Return :math:`\sum_{sumset} node`.
-
-        Three exact simplifications keep the expression readable: an empty ``sumset`` is the identity, summing
-        variables out of a plain joint ``P(A)`` gives the smaller joint ``P(A \ sumset)``, and nested sums collapse
-        into one. The second is not merely cosmetic -- it is what keeps the estimand a plain joint for as long as the
-        algorithm has not genuinely left it, which in turn lets ``_district_product`` emit atomic conditionals instead
-        of ratios.
-        """
-        sumset = frozenset(sumset)
-        if not sumset:
-            return node
-        if isinstance(node, ProbabilityNode) and not node.do and not node.cond:
-            return ProbabilityNode(node.variables - sumset)
-        if isinstance(node, MarginalNode):
-            return MarginalNode(node.children[0], sumset=sumset | node.sumset)
-        return MarginalNode(node, sumset=sumset)
-
     def _district_product(self, estimand, district, ordered):
         r"""Return :math:`\prod_{V_i \in district} P(v_i \mid v_\pi^{(i-1)})`.
 
@@ -145,13 +126,13 @@ class ID(BaseFormulaIdentification):
             if v_i not in district:
                 continue
 
-            numerator = self._marginalize(estimand, ordered[i + 1 :])
+            numerator = estimand.marginalize(ordered[i + 1 :])
             if i == 0:
                 # v_π^{(0)} is empty, so the denominator would be Σ_v P = 1.
                 factors.append(numerator)
                 continue
 
-            denominator = self._marginalize(estimand, ordered[i:])
+            denominator = estimand.marginalize(ordered[i:])
             if isinstance(numerator, ProbabilityNode) and isinstance(denominator, ProbabilityNode):
                 # Both collapsed, so P(A) / P(A \ {V_i}) is the atomic P(v_i | a \ {v_i}).
                 factors.append(ProbabilityNode(frozenset({v_i}), cond=denominator.variables))
@@ -186,7 +167,7 @@ class ID(BaseFormulaIdentification):
         """
         # Line 1: x = ∅. The effect is a marginal of the carried estimand.
         if not exposures:
-            return self._marginalize(estimand, variables - outcomes)
+            return estimand.marginalize(variables - outcomes)
 
         # Line 2: V ≠ An(Y)_G. Restrict the whole problem to An(Y).
         ancestors = frozenset(causal_graph.get_ancestors(outcomes))
@@ -196,7 +177,7 @@ class ID(BaseFormulaIdentification):
                 exposures & ancestors,
                 ancestors,
                 causal_graph.get_ancestral_graph(ancestors),
-                self._marginalize(estimand, variables - ancestors),
+                estimand.marginalize(variables - ancestors),
                 ordering,
             )
 
@@ -224,7 +205,7 @@ class ID(BaseFormulaIdentification):
                     return False
                 factors.append(factor)
             # k > 1 here, so there are always at least two factors.
-            return self._marginalize(ProductNode(factors), variables - (outcomes | exposures))
+            return ProductNode(factors).marginalize(variables - (outcomes | exposures))
 
         # C(G \ X) = {S}. S is bidirected-connected in G \ X and G \ X keeps every bidirected edge of G between its
         # nodes, so S is bidirected-connected in G too and therefore lies inside exactly one C-component of G.
@@ -240,7 +221,7 @@ class ID(BaseFormulaIdentification):
 
         # Line 6: S ∈ C(G). Return Σ_{s\y} Π_{Vi∈S} P(v_i | v_π^{(i-1)}).
         if S_prime == S:
-            return self._marginalize(self._district_product(estimand, S, ordered), S - outcomes)
+            return self._district_product(estimand, S, ordered).marginalize(S - outcomes)
 
         # Line 7: S ⊂ S' ∈ C(G). Recurse into G_{S'} with the estimand replaced by Q[S'].
         return self._identify_recursive(
