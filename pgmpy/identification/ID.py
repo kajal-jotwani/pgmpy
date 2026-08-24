@@ -9,7 +9,7 @@ from pgmpy.identification.probability_expression import (
 
 
 class ID(BaseFormulaIdentification):
-    """
+    r"""
     Given a causal graph, identifies the causal effect using the ID algorithm.
 
     The class implements the recursive identification procedure of :footcite:t:`shpitser_2006` (Fig. 3) for ADMGs and
@@ -38,7 +38,16 @@ class ID(BaseFormulaIdentification):
     ... )
     >>> id_algo = ID()
     >>> id_algo.identify(admg).to_latex()
-    '\\\\sum_{M} P(M \\\\mid X) \\\\left[ \\\\sum_{X} P(X) P(Y \\\\mid M, X) \\\\right]'
+    '\\sum_{M} P(M \\mid X) \\left[ \\sum_{X} P(X) P(Y \\mid M, X) \\right]'
+
+    >>> from pgmpy.base import DAG
+    >>> dag = DAG(
+    ...     ebunch=[("Z", "X"), ("Z", "Y"), ("X", "Y")],
+    ...     exposures={"X"},
+    ...     outcomes={"Y"},
+    ... )
+    >>> ID().identify(dag).to_latex()
+    '\\sum_{Z} P(Z) P(Y \\mid X, Z)'
     """
 
     supported_graph_types = (ADMG, DAG)
