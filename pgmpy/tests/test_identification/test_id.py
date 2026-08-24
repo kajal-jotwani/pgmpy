@@ -243,6 +243,38 @@ class TestIDInputHandling:
         result = ID().identify(dag)
         assert result.to_latex() == r"P(Y)"
 
+    def test_dag_latents_are_projected_to_bidirected_edges(self):
+        """A DAG that names its confounder must behave like the bow arc, not like a back-door graph: U is unobserved,
+        so no formula may condition on it."""
+        dag = DAG(ebunch=[("U", "X"), ("U", "Y"), ("X", "Y")], latents={"U"})
+        dag = dag.with_role("exposures", ["X"]).with_role("outcomes", ["Y"])
+        assert ID().identify(dag) is False
+
+    def test_dag_latent_projection_matches_the_hand_written_admg(self):
+        """The front-door graph written with an explicit confounder projects onto the ADMG fixture."""
+        dag = DAG(ebunch=[("X", "M"), ("M", "Y"), ("U", "X"), ("U", "Y")], latents={"U"})
+        dag = dag.with_role("exposures", ["X"]).with_role("outcomes", ["Y"])
+        assert ID().identify(dag).to_latex() == ID().identify(graph(FRONT_DOOR, {"X"}, {"Y"})).to_latex()
+
+    def test_dag_latent_projection_bridges_directed_paths_through_latents(self):
+        """A latent lying on a directed path becomes a directed edge, not a bidirected one."""
+        dag = DAG(ebunch=[("X", "U"), ("U", "Y")], latents={"U"})
+        dag = dag.with_role("exposures", ["X"]).with_role("outcomes", ["Y"])
+        assert ID().identify(dag).to_latex() == r"P(Y \mid X)"
+
+    def test_dag_latent_mediator_is_not_treated_as_a_confounder(self):
+        """A latent with a single observed descendant opens no back-door path, so the effect stays identifiable."""
+        dag = DAG(ebunch=[("X", "U"), ("U", "Y"), ("X", "Y")], latents={"U"})
+        dag = dag.with_role("exposures", ["X"]).with_role("outcomes", ["Y"])
+        assert ID().identify(dag).to_latex() == r"P(Y \mid X)"
+
+    @pytest.mark.parametrize("role", ["exposures", "outcomes"])
+    def test_latent_exposures_and_outcomes_are_rejected(self, role):
+        dag = DAG(ebunch=[("U", "X"), ("X", "Y")], latents={"U"})
+        dag = dag.with_role(role, ["U"]).with_role("outcomes" if role == "exposures" else "exposures", ["Y"])
+        with pytest.raises(ValueError, match="cannot be both latent"):
+            ID().identify(dag)
+
     def test_exposures_and_outcomes_must_be_disjoint(self):
         """Definition 2 defines P_x(Y) only when X and Y are disjoint."""
         with pytest.raises(ValueError, match="disjoint"):

@@ -56,14 +56,15 @@ class ID(BaseFormulaIdentification):
         expression: ProbabilityExpressionTree | False
             The identified formula, or False if the effect is not identifiable.
         """
-        # TODO: Remove this conversion once DAG inherits _CoreGraph.
+        # Steps 1-7 are stated for semi-Markovian models, so a DAG is first replaced by its latent projection: the
+        # latents must become bidirected edges before the districts of Steps 4-7 can see the confounding.
         if isinstance(causal_graph, DAG):
-            admg = ADMG(edge_list=[(u, v, "->") for u, v in causal_graph.edges()])
-            # `edge_list` alone silently drops nodes that have no edges.
-            admg.add_nodes_from(causal_graph.nodes())
-            for role, variables in causal_graph.get_role_dict().items():
-                admg.with_role(role=role, variables=variables, inplace=True)
-            causal_graph = admg
+            # A latent has no observational or interventional quantity of its own, so it cannot carry a role the
+            # estimand is defined over. Checked before projecting, while the latents are still nodes.
+            for role in ("exposures", "outcomes"):
+                if latent_roles := (set(causal_graph.latents) & set(causal_graph.get_role(role))):
+                    raise ValueError(f"{sorted(latent_roles)} cannot be both latent and in '{role}'.")
+            causal_graph = causal_graph.to_admg()
 
         exposures = frozenset(causal_graph.get_role("exposures"))
         outcomes = frozenset(causal_graph.get_role("outcomes"))
