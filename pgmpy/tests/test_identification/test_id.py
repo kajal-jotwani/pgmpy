@@ -676,6 +676,32 @@ class TestIDCInputHandling:
         result = IDC().identify(dag)
         assert result.to_latex() == r"P(Y \mid M, X)"
 
+    def test_dag_latents_are_projected_to_bidirected_edges(self):
+        """A DAG that names its confounder must behave like the bow arc: U is unobserved, so no formula may condition
+        on it, and the ``ID`` subcall at Step 2 finds the hedge."""
+        dag = DAG(ebunch=[("U", "X"), ("U", "Y"), ("X", "Y"), ("Z", "Y")], latents={"U"})
+        dag = dag.with_role("exposures", ["X"]).with_role("outcomes", ["Y"]).with_role("conditioning", ["Z"])
+        assert IDC().identify(dag) is False
+
+    def test_dag_latent_mediator_is_not_treated_as_a_confounder(self):
+        """A latent with a single observed descendant opens no back-door path, so the effect stays identifiable."""
+        dag = DAG(ebunch=[("X", "U"), ("U", "Y"), ("X", "M"), ("M", "Y")], latents={"U"})
+        dag = dag.with_role("exposures", ["X"]).with_role("outcomes", ["Y"]).with_role("conditioning", ["M"])
+        assert IDC().identify(dag).to_latex() == r"P(Y \mid M, X)"
+
+    @pytest.mark.parametrize("role", ["exposures", "outcomes", "conditioning"])
+    def test_latent_roles_are_rejected(self, role):
+        """``conditioning`` is checked alongside the two roles ``ID`` validates, since P_x(y|z) is no more defined
+        over an unobserved Z than over an unobserved X or Y."""
+        dag = DAG(ebunch=[("U", "X"), ("X", "Y"), ("Z", "Y")], latents={"U"})
+        roles = {"exposures": ["X"], "outcomes": ["Y"], "conditioning": ["Z"]}
+        roles[role] = ["U"]
+        for name, variables in roles.items():
+            dag = dag.with_role(name, variables)
+
+        with pytest.raises(ValueError, match="cannot be both latent"):
+            IDC().identify(dag)
+
     @pytest.mark.parametrize(
         ("exposures", "outcomes", "conditioning", "message"),
         [

@@ -10,37 +10,6 @@ from pgmpy.identification.probability_expression import (
 )
 
 
-def _to_admg(causal_graph, roles):
-    """Return ``causal_graph`` as an ADMG, keeping its nodes and role assignments.
-
-    Steps 1-7 are stated for semi-Markovian models, so a DAG is first replaced by its latent projection: the latents
-    must become bidirected edges before the districts of Steps 4-7 can see the confounding. Anything already an ADMG
-    is returned unchanged.
-
-    Parameters
-    ----------
-    causal_graph: ADMG | DAG
-        The graph to convert.
-
-    roles: tuple
-        The roles the estimand is defined over, none of which a latent may carry.
-
-    Returns
-    -------
-    admg: ADMG
-        The latent projection of ``causal_graph``.
-    """
-    if not isinstance(causal_graph, DAG):
-        return causal_graph
-
-    # A latent has no observational or interventional quantity of its own, so it cannot carry a role the estimand is
-    # defined over. Checked before projecting, while the latents are still nodes.
-    for role in roles:
-        if latent_roles := (set(causal_graph.latents) & set(causal_graph.get_role(role))):
-            raise ValueError(f"{sorted(latent_roles)} cannot be both latent and in '{role}'.")
-    return causal_graph.to_admg()
-
-
 class ID(BaseFormulaIdentification):
     r"""
     Given a causal graph, identifies the causal effect using the ID algorithm.
@@ -98,45 +67,23 @@ class ID(BaseFormulaIdentification):
         expression: ProbabilityExpressionTree | False
             The identified formula, or False if the effect is not identifiable.
         """
-        causal_graph = _to_admg(causal_graph, self.required_roles)
+        # Steps 1-7 are stated for semi-Markovian models, so a DAG is first replaced by its latent projection: the
+        # latents must become bidirected edges before the districts of Steps 4-7 can see the confounding.
+        if isinstance(causal_graph, DAG):
+            # A latent has no observational or interventional quantity of its own, so it cannot carry a role the
+            # estimand is defined over. Checked before projecting, while the latents are still nodes.
+            for role in ("exposures", "outcomes"):
+                if latent_roles := (set(causal_graph.latents) & set(causal_graph.get_role(role))):
+                    raise ValueError(f"{sorted(latent_roles)} cannot be both latent and in '{role}'.")
+            causal_graph = causal_graph.to_admg()
 
         exposures = frozenset(causal_graph.get_role("exposures"))
         outcomes = frozenset(causal_graph.get_role("outcomes"))
+        variables = frozenset(causal_graph.nodes())
 
         # Definition 2 of the paper defines P_x(Y) only when X and Y are disjoint.
         if overlap := (exposures & outcomes):
             raise ValueError(f"'exposures' and 'outcomes' must be disjoint, but {sorted(overlap)} is in both.")
-
-        result = self._identify_effect(outcomes, exposures, causal_graph)
-        if result is False:
-            return False
-        return ProbabilityExpressionTree(root=result)
-
-    def _identify_effect(self, outcomes, exposures, causal_graph):
-        """Identify the unconditional effect ``P_x(y)`` on an ADMG.
-
-        Takes the variable sets directly instead of reading them off the graph roles, so that ``IDC`` can reuse the
-        algorithm at its Step 2.
-
-        Parameters
-        ----------
-        outcomes: frozenset
-            ``y``, the outcome variables.
-
-        exposures: frozenset
-            ``x``, the variables being intervened on.
-
-        causal_graph: ADMG
-            ``G``, the causal graph. Its node set is the ``V`` of the algorithm.
-
-        Returns
-        -------
-        expression: _TreeNode | False
-            The root of the expression for ``P_x(y)``, or False if a hedge was found. On False, the witness pair is
-            left in ``self.hedge_``.
-        """
-        self.hedge_ = None
-        variables = frozenset(causal_graph.nodes())
 
         # A single topological order over the original graph, valid for every induced subgraph the recursion builds.
         ordering = causal_graph.get_topological_order()
@@ -144,7 +91,10 @@ class ID(BaseFormulaIdentification):
         # The estimand P. Starts as the observational joint P(v) and is rewritten by Steps 2 and 7.
         estimand = ProbabilityNode(variables)
 
-        return self._identify_recursive(outcomes, exposures, variables, causal_graph, estimand, ordering)
+        result = self._identify_recursive(outcomes, exposures, variables, causal_graph, estimand, ordering)
+        if result is False:
+            return False
+        return ProbabilityExpressionTree(root=result)
 
     def _district_product(self, estimand, district, ordered):
         r"""Return the chain rule product :math:`\prod_{V_i \in district} P(v_i \mid v_\pi^{(i-1)})` of Steps 6 and 7.
@@ -341,7 +291,14 @@ class IDC(BaseFormulaIdentification):
         expression: ProbabilityExpressionTree | False
             The identified formula, or False if the effect is not identifiable.
         """
-        causal_graph = _to_admg(causal_graph, self.required_roles)
+        # As for ``ID``, a DAG is first replaced by its latent projection. ``IDC`` checks ``conditioning`` alongside
+        # the two roles ``ID`` validates, since P_x(y|z) is no more defined over an unobserved Z than over an
+        # unobserved X or Y.
+        if isinstance(causal_graph, DAG):
+            for role in self.required_roles:
+                if latent_roles := (set(causal_graph.latents) & set(causal_graph.get_role(role))):
+                    raise ValueError(f"{sorted(latent_roles)} cannot be both latent and in '{role}'.")
+            causal_graph = causal_graph.to_admg()
 
         roles = {
             "exposures": frozenset(causal_graph.get_role("exposures")),
@@ -432,12 +389,16 @@ class IDC(BaseFormulaIdentification):
 
         # Step 2: nothing else can be moved. Identify the joint effect P_x(y, z) with ID and condition by dividing.
         # By Theorem 6 the conditional effect is identifiable exactly when that joint one is, so a hedge thrown by ID
-        # is the witness for this effect too.
+        # is the witness for this effect too. Step 1 has moved part of z into x, so the roles are restated on a copy
+        # of the graph rather than read off the original.
+        joint_graph = causal_graph.with_role("exposures", exposures).with_role("outcomes", outcomes | conditioning)
+
         id_algorithm = ID()
-        expression = id_algorithm._identify_effect(outcomes | conditioning, exposures, causal_graph)
-        if expression is False:
+        result = id_algorithm.identify(joint_graph)
+        if result is False:
             self.hedge_ = id_algorithm.hedge_
             return False
+        expression = result.root
 
         # P_x(y) already sums to one over y, so the division only bites when a conditioning set survives Step 1.
         if not conditioning:
