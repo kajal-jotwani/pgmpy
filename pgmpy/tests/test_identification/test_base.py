@@ -126,6 +126,16 @@ class IncompleteFormulaIdentification(BaseFormulaIdentification):
     supported_graph_types = (ADMG, DAG)
 
 
+class DummyQueryFormulaIdentification(BaseFormulaIdentification):
+    """Reads its query off an argument rather than off node roles, mirroring IDStar."""
+
+    supported_graph_types = (ADMG, DAG)
+    required_roles = ()
+
+    def _identify(self, causal_graph, event):
+        return f"identified {event}"
+
+
 class TestBaseFormulaIdentification:
     def test_identify_success(self, admg_bowarc):
         identifier = DummyFormulaIdentification()
@@ -163,3 +173,10 @@ class TestBaseFormulaIdentification:
     def test_identify_not_implemented(self, admg_bowarc):
         with pytest.raises(NotImplementedError):
             IncompleteFormulaIdentification().identify(admg_bowarc)
+
+    def test_query_arguments_are_forwarded_to_identify(self, admg_no_roles):
+        """A query that no role can carry is passed to ``identify`` and reaches ``_identify`` verbatim. With no
+        required roles, a graph carrying none of them is valid."""
+        identifier = DummyQueryFormulaIdentification()
+        assert identifier.identify(admg_no_roles, event="Y=y") == "identified Y=y"
+        assert identifier(admg_no_roles, event="Y=y") == "identified Y=y"

@@ -81,22 +81,29 @@ class BaseFormulaIdentification:
     """Base class for identification methods that return a symbolic expression.
 
     Subclasses should define ``supported_graph_types`` and implement ``_identify``. The ``_identify`` method must
-    return a ``ProbabilityExpressionTree`` when the effect is identifiable, or ``False`` otherwise. If identification
+    return a ``ProbabilityExpressionTree`` when the query is identifiable, or ``False`` otherwise. If identification
     fails, subclasses should set ``self.hedge_`` to the witness subgraph.
+
+    A query is not always fully described by the graph. ``ID`` and ``IDC`` read theirs off the node roles
+    (``exposures``, ``outcomes``, ``conditioning``), which ``required_roles`` declares; ``IDStar`` is given a
+    conjunction of counterfactual events instead, which no role can carry. Whatever keyword arguments ``identify``
+    is called with are therefore forwarded verbatim to ``_identify``, and ``required_roles`` may be empty.
 
     Parameters
     ----------
     causal_graph : ADMG or DAG
-        The causal graph with the required roles assigned. Subclasses may require additional roles through
-        ``required_roles``.
+        The causal graph with the roles listed in ``required_roles`` assigned.
+
+    **query
+        The part of the query that is not carried by the graph, forwarded to ``_identify``.
 
     Returns
     -------
     ProbabilityExpressionTree
-        The symbolic formula for the identified causal effect.
+        The symbolic formula for the identified query.
 
     False
-        If the causal effect is not identifiable. The witness subgraph is stored in ``self.hedge_``.
+        If the query is not identifiable. The witness subgraph is stored in ``self.hedge_``.
 
     Examples
     --------
@@ -120,14 +127,12 @@ class BaseFormulaIdentification:
         Checks that:
 
         1. ``causal_graph`` is an instance of one of ``supported_graph_types``.
-        2. The mandatory ``"exposures"`` and ``"outcomes"`` roles are assigned.
-        3. Every role listed in ``required_roles`` is assigned.
+        2. Every role listed in ``required_roles`` is assigned.
 
         Parameters
         ----------
         causal_graph : ADMG or DAG
-            The causal graph with at minimum `exposures` and `outcomes` roles assigned. Subclasses may require
-            additional roles via `required_roles`.
+            The causal graph with the roles listed in `required_roles` assigned.
 
         Raises
         ------
@@ -140,14 +145,14 @@ class BaseFormulaIdentification:
                 f"Got {type(causal_graph).__name__}."
             )
 
-        causal_graph.is_valid_causal_structure()
-
-        # Extra roles declared by the subclass (e.g. "conditioning" for IDC).
+        # The roles the subclass reads its query off: "exposures" and "outcomes" for ID, those two plus
+        # "conditioning" for IDC, and none at all for the counterfactual algorithms, whose query is passed to
+        # `identify` instead.
         for role in self.required_roles:
             if not causal_graph.get_role(role):
                 raise ValueError(f"causal_graph must have '{role}' role assigned for {type(self).__name__}.")
 
-    def identify(self, causal_graph):
+    def identify(self, causal_graph, **query):
         """
         Run the identification algorithm on a causal graph.
 
@@ -157,29 +162,34 @@ class BaseFormulaIdentification:
         Parameters
         ----------
         causal_graph : ADMG or DAG
-            The causal graph with at minimum `exposures` and `outcomes` roles assigned. Subclasses may require
-            additional roles via `required_roles`.
+            The causal graph with the roles listed in `required_roles` assigned.
+
+        **query
+            The part of the query that is not carried by the graph, forwarded to ``_identify``. ``ID`` and ``IDC``
+            take none; ``IDStar`` takes the conjunction of counterfactual events as ``event``.
 
         Returns
         -------
         ProbabilityExpressionTree
-            The symbolic formula for the identified causal effect. Access the expression tree via ``result.root``.
+            The symbolic formula for the identified query. Access the expression tree via ``result.root``.
 
         False
-            If the causal effect is not identifiable. The witness subgraph is stored in ``self.hedge_``.
+            If the query is not identifiable. The witness subgraph is stored in ``self.hedge_``.
         """
         self._validate_causal_graph(causal_graph)
         self.hedge_ = None
-        return self._identify(causal_graph)
+        return self._identify(causal_graph, **query)
 
-    def _identify(self, causal_graph):
+    def _identify(self, causal_graph, **query):
         """Override in subclasses to implement the identification algorithm.
 
         Parameters
         ----------
         causal_graph : ADMG or DAG
-            The causal graph with at minimum `exposures` and `outcomes` roles assigned. Subclasses may require
-            additional roles via `required_roles`.
+            The causal graph with the roles listed in `required_roles` assigned.
+
+        **query
+            The part of the query that is not carried by the graph.
 
         Returns
         -------
@@ -187,6 +197,6 @@ class BaseFormulaIdentification:
         """
         raise NotImplementedError
 
-    def __call__(self, causal_graph):
+    def __call__(self, causal_graph, **query):
         """Alias for the ``identify`` method."""
-        return self.identify(causal_graph)
+        return self.identify(causal_graph, **query)
