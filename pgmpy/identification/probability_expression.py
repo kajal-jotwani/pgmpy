@@ -9,7 +9,7 @@ class _TreeNode:
     possible: every node exposes ``children`` (list of _TreeNode), ``to_latex()`` (str), and
     ``__repr__()`` (str).
 
-    Concrete subclasses: ProbabilityNode, MarginalNode, ProductNode, DivisionNode.
+    Concrete subclasses: ProbabilityNode, MarginalNode, ProductNode, DivisionNode, ConstantNode.
 
     Do not instantiate directly.
     """
@@ -99,10 +99,17 @@ class ProbabilityNode(_TreeNode):
         Example: ``frozenset({"Z"})`` renders after the conditioning bar.
         Default: ``frozenset()``.
 
+    values : mapping, optional
+        The value each variable is fixed to, as a mapping from a variable in ``variables``, ``do`` or ``cond`` to
+        its value. A term of a causal effect ranges over all values of its variables and leaves this empty; a term
+        of a counterfactual query is a single cell of a distribution, and names the value.
+        Example: ``{"X": "x0"}`` renders ``X`` as ``X = x0``.
+        Default: ``None``.
+
     Raises
     ------
     ValueError
-        If ``variables`` is empty.
+        If ``variables`` is empty, or if ``values`` gives a value to a variable the term does not mention.
 
     Attributes
     ----------
@@ -118,25 +125,43 @@ class ProbabilityNode(_TreeNode):
     'P(Y \\mid X)'
     >>> ProbabilityNode(frozenset({"Y"}), do=frozenset({"X"})).to_latex()
     'P(Y \\mid do(X))'
+    >>> ProbabilityNode(
+    ...     frozenset({"Y"}), do=frozenset({"X"}), values={"Y": "y0", "X": "x1"}
+    ... ).to_latex()
+    'P(Y = y0 \\mid do(X = x1))'
     """
 
-    def __init__(self, variables, do=frozenset(), cond=frozenset()):
+    def __init__(self, variables, do=frozenset(), cond=frozenset(), values=None):
         self.variables = frozenset(variables)
         if not self.variables:
             raise ValueError("A probability term must have at least one variable.")
         self.do = frozenset(do)
         self.cond = frozenset(cond)
+        # Sorted so that two terms built from the same assignments hash and render alike.
+        self.values = None if values is None else tuple(sorted(dict(values).items(), key=lambda item: str(item[0])))
+        if self.values is not None:
+            if unmentioned := ({variable for variable, _ in self.values} - (self.variables | self.do | self.cond)):
+                raise ValueError(f"{sorted(unmentioned, key=str)} are given a value but are not in the term.")
         self.children = []
 
     def _marginalize(self, sumset):
         r"""Shrink a plain joint :math:`P(A)` to :math:`P(A \setminus sumset)`.
 
         Only a plain joint simplifies this way; summing out of a conditional or interventional term cannot be written
-        as a single atomic term.
+        as a single atomic term. Neither can summing out of a term that is a single cell rather than a distribution:
+        the values in ``sumset`` are then values of the summed-over variables, not variables of this term.
         """
-        if self.do or self.cond:
+        if self.do or self.cond or self.values:
             return super()._marginalize(sumset)
         return ProbabilityNode(self.variables - sumset)
+
+    def _terms_to_latex(self, var_set):
+        """Sort and join variable names, writing ``V = v`` for every variable ``values`` fixes."""
+        values = dict(self.values or ())
+        return ", ".join(
+            f"{variable} = {values[variable]}" if variable in values else str(variable)
+            for variable in sorted(var_set, key=str)
+        )
 
     def to_latex(self):
         r"""
@@ -160,13 +185,13 @@ class ProbabilityNode(_TreeNode):
         >>> ProbabilityNode(frozenset({"Y"}), do=frozenset({"X"}), cond=frozenset({"Z"})).to_latex()
         'P(Y \\mid do(X), Z)'
         """
-        variables_str = self._vars_to_latex(self.variables)
+        variables_str = self._terms_to_latex(self.variables)
 
         conditioning_parts = []
         if self.do:
-            conditioning_parts.append(r"do(" + self._vars_to_latex(self.do) + r")")
+            conditioning_parts.append(r"do(" + self._terms_to_latex(self.do) + r")")
         if self.cond:
-            conditioning_parts.append(self._vars_to_latex(self.cond))
+            conditioning_parts.append(self._terms_to_latex(self.cond))
 
         if conditioning_parts:
             inner = variables_str + r" \mid " + r", ".join(conditioning_parts)
@@ -181,15 +206,22 @@ class ProbabilityNode(_TreeNode):
             parts.append(f"do={set(self.do)!r}")
         if self.cond:
             parts.append(f"cond={set(self.cond)!r}")
+        if self.values:
+            parts.append(f"values={dict(self.values)!r}")
         return "ProbabilityNode(" + ", ".join(parts) + ")"
 
     def __eq__(self, other):
         if not isinstance(other, ProbabilityNode):
             return NotImplemented
-        return (self.variables, self.do, self.cond) == (other.variables, other.do, other.cond)
+        return (self.variables, self.do, self.cond, self.values) == (
+            other.variables,
+            other.do,
+            other.cond,
+            other.values,
+        )
 
     def __hash__(self):
-        return hash((self.variables, self.do, self.cond))
+        return hash((self.variables, self.do, self.cond, self.values))
 
 
 class MarginalNode(_TreeNode):
@@ -409,6 +441,57 @@ class DivisionNode(_TreeNode):
         return hash(tuple(self.children))
 
 
+class ConstantNode(_TreeNode):
+    r"""
+    Leaf node representing a constant.
+
+    A query can be answered without reference to any distribution: the probability of an empty conjunction of
+    events is 1, and the probability of a self-contradictory one is 0. Both arise in ``IDStar``, whose recursion
+    multiplies such answers into larger expressions.
+
+    Parameters
+    ----------
+    value : int or float
+        The constant. ``IDStar`` only ever produces ``0`` and ``1``.
+
+    Attributes
+    ----------
+    children : list
+        Always ``[]``. ``ConstantNode`` is always a leaf node.
+
+    Examples
+    --------
+    >>> from pgmpy.identification.probability_expression import ConstantNode
+    >>> ConstantNode(0).to_latex()
+    '0'
+    """
+
+    def __init__(self, value):
+        self.value = value
+        self.children = []
+
+    def to_latex(self):
+        """
+        Return LaTeX for the constant.
+
+        Returns
+        -------
+        str
+        """
+        return str(self.value)
+
+    def __repr__(self):
+        return f"ConstantNode(value={self.value!r})"
+
+    def __eq__(self, other):
+        if not isinstance(other, ConstantNode):
+            return NotImplemented
+        return self.value == other.value
+
+    def __hash__(self):
+        return hash((type(self).__name__, self.value))
+
+
 class ProbabilityExpressionTree:
     r"""
     Container for expression trees produced by identification algorithms.
@@ -418,8 +501,8 @@ class ProbabilityExpressionTree:
     routines and is not itself a tree node.
 
     The expression tree is composed of ``ProbabilityNode``, ``MarginalNode``, ``ProductNode``,
-    and ``DivisionNode`` nodes (all subclasses of ``_TreeNode``). Inspect or traverse the tree
-    via the ``root`` attribute and the ``children`` lists on nodes.
+    ``DivisionNode`` and ``ConstantNode`` nodes (all subclasses of ``_TreeNode``). Inspect or
+    traverse the tree via the ``root`` attribute and the ``children`` lists on nodes.
 
     Parameters
     ----------

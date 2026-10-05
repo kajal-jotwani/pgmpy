@@ -1,6 +1,7 @@
 import pytest
 
 from pgmpy.identification.probability_expression import (
+    ConstantNode,
     DivisionNode,
     MarginalNode,
     ProbabilityExpressionTree,
@@ -177,6 +178,68 @@ class TestProbabilityNode:
 
         latex_multi = MarginalNode(ProbabilityNode(frozenset({"X", "Y", "Z"})), sumset=frozenset({"X", "Z"})).to_latex()
         assert latex_multi.startswith(r"\sum_{X, Z}")
+
+
+class TestValuedProbabilityNode:
+    """A term of a counterfactual query is a single cell of a distribution, so it names the value of every
+    variable it mentions."""
+
+    def test_init(self):
+        p = ProbabilityNode(frozenset({"Y"}), do=frozenset({"X"}), values={"Y": "y0", "X": "x1"})
+        assert dict(p.values) == {"Y": "y0", "X": "x1"}
+
+        # Sorted on construction, so two terms built from the same assignments compare and hash alike.
+        assert p == ProbabilityNode(frozenset({"Y"}), do=frozenset({"X"}), values={"X": "x1", "Y": "y0"})
+        assert hash(p) == hash(ProbabilityNode(frozenset({"Y"}), do=frozenset({"X"}), values={"X": "x1", "Y": "y0"}))
+
+        assert ProbabilityNode(frozenset({"Y"})).values is None
+
+    def test_a_value_must_belong_to_a_variable_of_the_term(self):
+        with pytest.raises(ValueError, match="given a value but are not in the term"):
+            ProbabilityNode(frozenset({"Y"}), values={"Z": "z0"})
+
+    def test_values_distinguish_two_otherwise_equal_terms(self):
+        assert ProbabilityNode(frozenset({"Y"}), values={"Y": "y0"}) != ProbabilityNode(
+            frozenset({"Y"}), values={"Y": "y1"}
+        )
+        assert ProbabilityNode(frozenset({"Y"}), values={"Y": "y0"}) != ProbabilityNode(frozenset({"Y"}))
+
+    def test_to_latex(self):
+        assert ProbabilityNode(frozenset({"Y"}), values={"Y": "y0"}).to_latex() == "P(Y = y0)"
+        assert (
+            ProbabilityNode(
+                frozenset({"Y", "X"}), do=frozenset({"Z"}), values={"Y": "y0", "X": "x1", "Z": "z0"}
+            ).to_latex()
+            == r"P(X = x1, Y = y0 \mid do(Z = z0))"
+        )
+        # A variable without a value is still rendered by name alone.
+        assert ProbabilityNode(frozenset({"Y", "X"}), values={"Y": "y0"}).to_latex() == "P(X, Y = y0)"
+
+    def test_marginalize_does_not_shrink_a_single_cell(self):
+        """``sumset`` holds values rather than variables here, so the plain-joint shortcut would silently drop the
+        sum."""
+        cell = ProbabilityNode(frozenset({"X", "Y"}), values={"X": "x0", "Y": "y0"})
+        assert cell.marginalize({"x0"}) == MarginalNode(cell, sumset=frozenset({"x0"}))
+
+
+class TestConstantNode:
+    def test_init_and_to_latex(self):
+        assert ConstantNode(0).children == []
+        assert ConstantNode(0).value == 0
+        assert ConstantNode(0).to_latex() == "0"
+        assert ConstantNode(1).to_latex() == "1"
+
+    def test_eq_and_hash(self):
+        assert ConstantNode(0) == ConstantNode(0)
+        assert ConstantNode(0) != ConstantNode(1)
+        assert ConstantNode(0) != ProbabilityNode(frozenset({"Y"}))
+        assert len({ConstantNode(0), ConstantNode(0), ConstantNode(1)}) == 2
+
+    def test_is_a_tree_node(self, prob_y):
+        assert isinstance(ConstantNode(1), _TreeNode)
+        assert ProbabilityExpressionTree(root=ConstantNode(0)).to_latex() == "0"
+        # It is a leaf, but not a probability term, so it contributes no leaves.
+        assert ProbabilityExpressionTree(root=ProductNode([ConstantNode(1), prob_y])).find_leaves() == [prob_y]
 
 
 class TestMarginalNode:
